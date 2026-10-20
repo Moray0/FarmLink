@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Soft circular background with green gradient -->
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e" />
+      <stop offset="100%" stop-color="#15803d" />
+    </linearGradient>
+    <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#dcfce7" />
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded Icon Base -->
+  <rect width="64" height="64" rx="16" fill="url(#bgGrad)" />
+
+  <!-- Soil / Earth Arc at base -->
+  <path d="M18 48C24 45 40 45 46 48" stroke="#86efac" stroke-width="2.5" stroke-linecap="round" />
+
+  <!-- Plant Stem -->
+  <path d="M32 46V28C32 23 29 20 25 18" stroke="url(#leafGrad)" stroke-width="3" stroke-linecap="round" />
+
+  <!-- Right Primary Sprout Leaf -->
+  <path d="M32 30C34 23 43 20 47 22C49 26 44 35 32 33Z" fill="url(#leafGrad)" />
+
+  <!-- Left Secondary Sprout Leaf -->
+  <path d="M31 36C27 32 19 33 17 36C17 40 23 44 31 39Z" fill="#bbf7d0" />
+
+  <!-- Leaf Vein Accent -->
+  <path d="M34 29C38 26 43 24 45 23" stroke="#16a34a" stroke-width="1.2" stroke-linecap="round" opacity="0.6" />
+</svg>
