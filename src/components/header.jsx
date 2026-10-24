@@ -1,140 +1,126 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { PiPottedPlant } from "react-icons/pi";
+import { HiMenu, HiX } from "react-icons/hi";
 
-// The Header component displays the top navigation bar of the FarmLink website
-export default function Header() {
-  // State to track if the mobile navigation menu is open or closed
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+const Header = () => {
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  // Toggle function for opening and closing the mobile menu
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
+  const closeMenu = () => {
+    setMenuOpen(false);
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-green-100 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
-          
-          {/* Left: Brand Logo and Name */}
-          <div className="flex items-center gap-2">
-            <a href="#home" className="flex items-center gap-2 group">
-              {/* Sprout Icon Badge */}
-              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-xl text-green-700 group-hover:bg-green-200 transition-colors">
-                🌱
-              </div>
-              <span className="text-2xl font-bold text-green-800 tracking-tight">
-                Farm<span className="text-green-600">Link</span>
-              </span>
-            </a>
-          </div>
+    <header className="sticky top-0 z-50 bg-white border-b border-green-100 shadow-sm">
+      <div className="flex items-center justify-between px-4 sm:px-6 py-2">
 
-          {/* Middle: Navigation Links (Desktop) */}
-          <nav className="hidden md:flex items-center gap-8">
-            <a 
-              href="#home" 
-              className="text-base font-semibold text-green-700 hover:text-green-800 transition-colors"
-            >
-              Home
-            </a>
-            <a 
-              href="#marketplace" 
-              className="text-base font-medium text-gray-600 hover:text-green-700 transition-colors"
-            >
-              Marketplace
-            </a>
-            <a 
-              href="#farmers" 
-              className="text-base font-medium text-gray-600 hover:text-green-700 transition-colors"
-            >
-              Farmers
-            </a>
-          </nav>
+        {/* Logo */}
+        <Link
+          to="/"
+          onClick={closeMenu}
+          className="text-2xl font-bold text-green-800 my-auto"
+        >
+          <PiPottedPlant className="w-9 h-9 inline-block" />
+          Farm<span className="text-green-600">Link</span>
+        </Link>
 
-          {/* Right: Auth Action Buttons (Desktop) */}
-          <div className="hidden md:flex items-center gap-3">
-            <a
-              href="#login"
-              className="px-4 py-2 text-sm font-semibold text-green-700 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors"
-            >
-              Log in
-            </a>
-            <a
-              href="#signup"
-              className="px-5 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-sm hover:shadow transition-all"
-            >
-              Sign up
-            </a>
-          </div>
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center text-[18px] gap-6">
+          <Link to="/" className="text-gray-700 hover:text-green-700 font-medium">
+            Home
+          </Link>
 
-          {/* Mobile Menu Button (Hamburger) */}
-          <div className="flex md:hidden">
-            <button
-              type="button"
-              onClick={toggleMobileMenu}
-              className="p-2 rounded-md text-gray-700 hover:text-green-700 hover:bg-green-50 focus:outline-none"
-              aria-label="Toggle navigation menu"
-            >
-              {isMobileMenuOpen ? (
-                // Close 'X' icon
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                // Hamburger icon
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
-            </button>
-          </div>
+          <Link to="/marketplace" className="text-gray-700 hover:text-green-700 font-medium">
+            Marketplace
+          </Link>
 
+          <Link to="/farmers" className="text-gray-700 hover:text-green-700 font-medium">
+            Farmers
+          </Link>
+        </nav>
+
+        {/* Desktop Buttons */}
+        <div className="hidden md:flex items-center gap-3">
+          <Link
+            to="/login"
+            className="px-4 py-2 text-green-700 font-medium hover:bg-green-50 rounded-lg"
+          >
+            Log in
+          </Link>
+
+          <Link
+            to="/signup"
+            className="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 shadow-sm"
+          >
+            Sign up
+          </Link>
         </div>
+
+        {/* Mobile Hamburger Button */}
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="md:hidden p-2 text-green-800 hover:bg-green-50 rounded-lg"
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={menuOpen}
+        >
+          {menuOpen ? (
+            <HiX className="w-7 h-7" />
+          ) : (
+            <HiMenu className="w-7 h-7" />
+          )}
+        </button>
       </div>
 
-      {/* Mobile Navigation Dropdown Menu */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden bg-white border-b border-green-100 px-4 pt-3 pb-6 space-y-3">
-          <a
-            href="#home"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-md text-base font-semibold text-green-700 bg-green-50"
-          >
-            Home
-          </a>
-          <a
-            href="#marketplace"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-green-700 hover:bg-green-50"
-          >
-            Marketplace
-          </a>
-          <a
-            href="#farmers"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-green-700 hover:bg-green-50"
-          >
-            Farmers
-          </a>
+      {/* Mobile Menu */}
+      {menuOpen && (
+        <div className="md:hidden border-t border-green-100 bg-white px-4 py-4">
+          <nav className="flex flex-col gap-4">
+            <Link
+              to="/"
+              onClick={closeMenu}
+              className="text-gray-700 hover:text-green-700 font-medium"
+            >
+              Home
+            </Link>
 
-          {/* Mobile Buttons */}
-          <div className="pt-4 border-t border-gray-100 flex flex-col gap-2">
-            <a
-              href="#login"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="w-full text-center py-2.5 text-sm font-semibold text-green-700 border border-green-600 rounded-lg hover:bg-green-50"
+            <Link
+              to="/marketplace"
+              onClick={closeMenu}
+              className="text-gray-700 hover:text-green-700 font-medium"
+            >
+              Marketplace
+            </Link>
+
+            <Link
+              to="/farmers"
+              onClick={closeMenu}
+              className="text-gray-700 hover:text-green-700 font-medium"
+            >
+              Farmers
+            </Link>
+
+            <hr className="border-green-100" />
+
+            <Link
+              to="/login"
+              onClick={closeMenu}
+              className="text-green-700 font-medium hover:bg-green-50 rounded-lg"
             >
               Log in
-            </a>
-            <a
-              href="#signup"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="w-full text-center py-2.5 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 shadow-sm"
+            </Link>
+
+            <Link
+              to="/signup"
+              onClick={closeMenu}
+              className="text-center px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 shadow-sm"
             >
               Sign up
-            </a>
-          </div>
+            </Link>
+          </nav>
         </div>
       )}
     </header>
   );
-}
+};
+
+export default Header;

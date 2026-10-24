@@ -1,5 +1,5 @@
 {
-  "name": "my-react-app",
+  "name": "MY PROJECT",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,8 +11,11 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "firebase": "^13.1.0",
+    "motion": "^14.5.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-icons": "^5.7.0",
     "react-router-dom": "^7.18.4",
     "tailwindcss": "^4.3.3"
   },
