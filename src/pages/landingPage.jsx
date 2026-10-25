@@ -168,21 +168,24 @@ const LandingPage = () => {
                 at fair prices, or sell your harvests directly to thousands of ready buyers.
               </p>
 
-              {/* Call-To-Action (CTA) Buttons */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-                <a
-                  href="/marketplace"
-                  className="px-8 py-3.5 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 text-center"
-                >
-                  Browse Fresh Produce
-                </a>
-                <a
-                  href="/farmer-signup"
-                  className="px-8 py-3.5 bg-white/10 hover:bg-white/20 text-white border border-white/40 font-semibold rounded-xl backdrop-blur-xs transition-all text-center"
-                >
-                  Join as a Farmer
-                </a>
-              </div>
+              
+            {/* Call-To-Action (CTA) Buttons */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+              <Link
+                to="/marketplace"
+                className="px-8 py-3.5 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 text-center"
+              >
+                Browse Fresh Produce
+              </Link>
+
+              <Link
+                to="/farmer-signup"
+                className="px-8 py-3.5 bg-white/10 hover:bg-white/20 text-white border border-white/40 font-semibold rounded-xl backdrop-blur-xs transition-all text-center"
+              >
+                Join as a Farmer
+              </Link>
+            </div>
+
 
               {/* Quick Stats Highlights */}
               <div className="grid grid-cols-3 gap-4 sm:gap-8 max-w-lg mt-12 pt-8 border-t border-white/20 text-left">
