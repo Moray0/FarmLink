@@ -1,17 +1,3 @@
-// roles.js - everything about roles lives in this one small file.
-//
-// There are three roles: "admin", "farmer" and "buyer".
-//
-// HOW EACH ROLE IS DECIDED
-//   admin   -> nobody can choose it. If your email is in ADMIN_EMAILS below,
-//              the app recognises you as admin automatically.
-//   farmer  -> chosen on the sign-up form.
-//   buyer -> chosen on the sign-up form (also the default, e.g. Google).
-//
-// IMPORTANT: this list is also written in firestore.rules. The code here
-// decides what the user *sees*; the rules decide what the database *allows*.
-// If you change one list, change the other one too.
-
 export const ADMIN_EMAILS = ["adeolaoyebimpe3@gmail.com"];
 
 export function isAdminEmail(email) {

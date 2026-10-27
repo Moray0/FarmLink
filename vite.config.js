@@ -8,5 +8,11 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    watch: {
+      usePolling: true,   // Fix for Windows HMR not detecting file changes
+      interval: 100,      // Poll every 100ms for a good balance of speed vs CPU
+    },
+  },
 })
 

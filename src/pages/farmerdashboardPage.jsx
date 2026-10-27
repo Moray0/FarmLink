@@ -97,12 +97,13 @@ const FarmerDashboardPage = () => {
     const navigate = useNavigate();
 
     const {
-        user,
-        profile: authProfile,
-        role,
-        loading: authLoading,
-        logOut,
-    } = useAuth();
+    user,
+    profile: authProfile,
+    role,
+    loading: authLoading,
+    logOut,
+    justSignedUp,
+} = useAuth();
 
     const [products, setProducts] = useState([]);
     const [orders, setOrders] = useState([]);
@@ -706,7 +707,7 @@ const FarmerDashboardPage = () => {
 
             {/* Sidebar */}
             <aside
-                className={`${sidebarOpen ? 'block' : 'hidden'} md:block w-full md:w-64 bg-white border-r border-gray-200 p-5 flex flex-col justify-between shrink-0`}
+                className={`${sidebarOpen ? 'block' : 'hidden'} md:block w-full md:w-64 md:fixed md:top-0 md:left-0 md:h-screen md:z-40 md:overflow-y-auto bg-white border-r border-gray-200 p-5 flex flex-col justify-between shrink-0`}
             >
                 <div>
                     <div className="mb-6 hidden md:block">
@@ -740,20 +741,19 @@ const FarmerDashboardPage = () => {
                         })}
                     </nav>
                 </div>
-
-                <div className="pt-6 border-t border-gray-200 mt-6">
-                    <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition"
-                    >
-                        <PiSignOut className="w-5 h-5" />
-                        Logout
-                    </button>
-                </div>
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 min-w-0 p-4 md:p-8 space-y-6">
+            <main className="flex-1 min-w-0 p-4 md:p-8 md:ml-64 space-y-6">
+                <div className="flex justify-end">
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-semibold"
+                    >
+                        <PiSignOut className="w-5 h-5" />
+                        Log Out
+                    </button>
+                </div>
                 {productError && (
                     <div role="alert" className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
                         {productError}
@@ -772,8 +772,10 @@ const FarmerDashboardPage = () => {
                         <div className="bg-white p-6 rounded-xl border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
                                 <h1 className="text-2xl font-bold text-gray-900">
-                                    Welcome back to {profile.farmName} dashboard!!!
-                                </h1>
+                            {justSignedUp
+                                ? `Welcome to ${profile.farmName} dashboard!`
+                                : `Welcome back to ${profile.farmName} dashboard!`}
+                        </h1>
 
                                 <p className="text-gray-600 text-sm mt-1">
                                     Manage your farm produce, view buyer orders, and keep your farm updated.

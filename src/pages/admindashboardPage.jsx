@@ -620,9 +620,9 @@ const AdminDashboardPage = () => {
 
             {/* Sidebar */}
             <aside
-                className={`${sidebarOpen ? 'block' : 'hidden'
-                    } md:block w-full md:w-64 bg-white border-r border-gray-200 p-5 flex flex-col justify-between shrink-0`}
-            >
+    className={`${sidebarOpen ? 'block' : 'hidden'
+        } md:flex md:flex-col md:justify-between md:fixed md:top-0 md:left-0 md:h-screen md:z-40 md:overflow-y-auto w-full md:w-64 bg-white border-r border-gray-200 p-5 shrink-0`}
+>
                 <div>
                     <div className="mb-6 hidden md:block">
                         <Link
@@ -661,20 +661,19 @@ const AdminDashboardPage = () => {
                         })}
                     </nav>
                 </div>
-
-                <div className="pt-6 border-t border-gray-200 mt-6">
-                    <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition"
-                    >
-                        <PiSignOut className="w-5 h-5" />
-                        Logout
-                    </button>
-                </div>
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 min-w-0 p-4 md:p-8 space-y-6">
+           <main className="flex-1 min-w-0 p-4 md:p-8 md:ml-64 space-y-6">
+            <div className="flex justify-end">
+    <button
+        onClick={handleLogout}
+        className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-red-600 bg-white border border-gray-200 rounded-lg hover:bg-red-50 transition"
+    >
+        <PiSignOut className="w-5 h-5" />
+        Logout
+    </button>
+</div>
                 {/* DASHBOARD */}
                 {activeTab === 'Dashboard' && (
                     <>

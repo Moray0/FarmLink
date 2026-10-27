@@ -1,6 +1,6 @@
-
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import DashboardTopBar from '../components/dashboardTopBar';
 import { motion, useScroll } from 'motion/react';
 import {
     PiMapPin,
@@ -17,142 +17,6 @@ import {
 import { db } from '../firebase.js';
 import Footer from '../components/footer';
 
-// Sample farmer profiles
-const allFarmers = [
-    {
-        id: 'sample-1',
-        name: 'Adeola Okafor',
-        farmName: 'Adeola Green Farms',
-        location: 'Ogun State',
-        specialty: 'Vegetables',
-        verified: true,
-        image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
-        bio: 'Adeola grows fresh vegetables in Ogun State, supplying tomatoes, peppers, and leafy greens.',
-        products: ['Fresh Roma Tomatoes', 'Crisp Bell Peppers', 'Fresh Green Spinach', 'Hot Habanero Peppers'],
-    },
-    {
-        id: 'sample-2',
-        name: 'Fatima Bello',
-        farmName: 'Kano Grain Producers',
-        location: 'Kano State',
-        specialty: 'Grains',
-        verified: true,
-        image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80',
-        bio: 'Fatima specializes in maize, millet, and sorghum.',
-        products: ['Golden Sweet Maize', 'Red Sorghum & Millet', 'Long Grain White Rice'],
-    },
-    {
-        id: 'sample-3',
-        name: 'Chukwuemeka Nwosu',
-        farmName: 'Delta Groves Agro',
-        location: 'Delta State',
-        specialty: 'Fruits',
-        verified: true,
-        image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
-        bio: 'Chukwuemeka grows tropical fruits, including plantains, bananas, and citrus fruits.',
-        products: ['Organic Plantain Bunches', 'Ripe Cavendish Bananas', 'Juicy Valencia Oranges'],
-    },
-    {
-        id: 'sample-4',
-        name: 'Hauwa Ibrahim',
-        farmName: 'Plateau Highland Harvest',
-        location: 'Plateau State',
-        specialty: 'Tubers',
-        verified: false,
-        image: 'https://images.unsplash.com/photo-1544005313-94ddf028c311?auto=format&fit=crop&w=400&q=80',
-        bio: 'Hauwa farms sweet potatoes, carrots, and other root crops.',
-        products: ['Farm Fresh Sweet Potatoes', 'Crunchy Orange Carrots', 'Yellow Cassava Tubers'],
-    },
-    {
-        id: 'sample-5',
-        name: 'Tunde Adeyemi',
-        farmName: 'Sunrise Poultry Farms',
-        location: 'Ogun State',
-        specialty: 'Poultry',
-        verified: true,
-        image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80',
-        bio: 'Tunde operates a poultry farm producing eggs and chickens.',
-        products: ['Farm Fresh Eggs', 'Whole Chicken', 'Turkey'],
-    },
-    {
-        id: 'sample-6',
-        name: 'Amina Yusuf',
-        farmName: 'Sokoto Grain Fields',
-        location: 'Sokoto State',
-        specialty: 'Grains',
-        verified: true,
-        image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=400&q=80',
-        bio: 'Amina specializes in sorghum and millet.',
-        products: ['Red Sorghum & Millet', 'Golden Sweet Maize'],
-    },
-    {
-        id: 'sample-7',
-        name: 'Emeka Eze',
-        farmName: 'Abakaliki Rice Mills',
-        location: 'Ebonyi State',
-        specialty: 'Grains',
-        verified: true,
-        image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=400&q=80',
-        bio: 'Emeka grows long-grain rice in Ebonyi State.',
-        products: ['Long Grain White Rice'],
-    },
-    {
-        id: 'sample-8',
-        name: 'Grace Okonkwo',
-        farmName: 'Cross River Plantations',
-        location: 'Cross River State',
-        specialty: 'Fruits',
-        verified: false,
-        image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=80',
-        bio: 'Grace grows bananas and other tropical fruits.',
-        products: ['Ripe Cavendish Bananas', 'Whole Sweet Watermelon'],
-    },
-    {
-        id: 'sample-9',
-        name: 'Ibrahim Musa',
-        farmName: 'Zaki Biam Yam Mart',
-        location: 'Benue State',
-        specialty: 'Tubers',
-        verified: true,
-        image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80',
-        bio: 'Ibrahim grows premium white yams and other root crops.',
-        products: ['Premium White Yam Tubers', 'Yellow Cassava Tubers'],
-    },
-    {
-        id: 'sample-10',
-        name: 'Blessing Adekunle',
-        farmName: 'Lagos Urban Greens',
-        location: 'Lagos State',
-        specialty: 'Vegetables',
-        verified: true,
-        image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
-        bio: 'Blessing grows leafy greens and herbs in Lagos.',
-        products: ['Fresh Green Spinach', 'Fresh Lemongrass & Basil'],
-    },
-    {
-        id: 'sample-11',
-        name: 'Sule Abdullahi',
-        farmName: 'Kaduna Agro Hub',
-        location: 'Kaduna State',
-        specialty: 'Livestock',
-        verified: true,
-        image: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=400&q=80',
-        bio: 'Sule raises cattle and goats.',
-        products: ['Fresh Beef', 'Goat Meat', 'Fresh Milk'],
-    },
-    {
-        id: 'sample-12',
-        name: 'Ngozi Ibe',
-        farmName: 'Green Herb Sanctuary',
-        location: 'Enugu State',
-        specialty: 'Vegetables',
-        verified: false,
-        image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-        bio: 'Ngozi grows culinary herbs and fresh vegetables.',
-        products: ['Fresh Lemongrass & Basil', 'Fresh Ginger Roots', 'Aromatic Garlic Bulbs'],
-    },
-];
-
 const farmingCategories = [
     'All Farmers',
     'Vegetables',
@@ -167,6 +31,10 @@ const defaultFarmerImage =
     'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=600&q=80';
 
 const FarmerPage = () => {
+    const location = useLocation();
+    const openedFromBuyerDashboard =
+        location.state?.fromBuyerDashboard === true;
+
     const { scrollYProgress } = useScroll();
 
     const [selectedCategory, setSelectedCategory] = useState('All Farmers');
@@ -177,9 +45,9 @@ const FarmerPage = () => {
     const [profilesError, setProfilesError] = useState('');
     const [productsError, setProductsError] = useState('');
 
-    // Load public farmer profiles and available products separately.
-    // A farmer can appear even when they have not added any products.
     useEffect(() => {
+        let active = true;
+
         const loadFarmers = async () => {
             setLoading(true);
             setProfilesError('');
@@ -201,19 +69,30 @@ const FarmerPage = () => {
                         name: profile.displayName || 'FarmLink Farmer',
                         farmName: profile.farmName || 'My Farm',
                         location: profile.location || 'Location not provided',
-                        specialty: profile.specialty || profile.category || 'Agricultural Produce',
+                        specialty:
+                            profile.specialty ||
+                            profile.category ||
+                            'Agricultural Produce',
                         verified: profile.verified === true,
-                        image: profile.image || profile.photoURL || defaultFarmerImage,
-                        bio: profile.bio || 'Welcome to this farmer’s profile. Check back for available products.',
+                        image:
+                            profile.image ||
+                            profile.photoURL ||
+                            defaultFarmerImage,
+                        bio:
+                            profile.bio ||
+                            'Welcome to this farmer’s profile. Check back for available products.',
                         products: [],
                     }));
 
-                setRegisteredFarmers(profiles);
+                if (active) setRegisteredFarmers(profiles);
             } catch (error) {
                 console.error('Error loading farmer profiles:', error);
-                setProfilesError(
-                    'Could not load registered farmer profiles. Check your Firestore rules and connection.'
-                );
+
+                if (active) {
+                    setProfilesError(
+                        'Could not load registered farmer profiles. Check your Firestore rules and connection.'
+                    );
+                }
             }
 
             try {
@@ -229,21 +108,27 @@ const FarmerPage = () => {
                     ...productDoc.data(),
                 }));
 
-                setAvailableProducts(products);
+                if (active) setAvailableProducts(products);
             } catch (error) {
                 console.error('Error loading available products:', error);
-                setProductsError(
-                    'Could not load available products. Farmer profiles can still be displayed.'
-                );
+
+                if (active) {
+                    setProductsError(
+                        'Could not load available products. Farmer profiles can still be displayed.'
+                    );
+                }
             }
 
-            setLoading(false);
+            if (active) setLoading(false);
         };
 
         loadFarmers();
+
+        return () => {
+            active = false;
+        };
     }, []);
 
-    // Match available products to farmers using farmerId.
     const farmersWithProducts = registeredFarmers.map((farmer) => {
         const farmerProducts = availableProducts.filter(
             (product) => product.farmerId === farmer.id
@@ -263,11 +148,8 @@ const FarmerPage = () => {
         };
     });
 
-    // Keep the sample farmers and add real registered farmers.
-    const farmers = [
-        ...farmersWithProducts,
-        ...allFarmers,
-    ];
+    // Only registered farmers are displayed.
+    const farmers = farmersWithProducts;
 
     const filteredFarmers = farmers.filter((farmer) => (
         selectedCategory === 'All Farmers' ||
@@ -283,7 +165,14 @@ const FarmerPage = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    // Individual farmer profile.
+    const renderDashboardTopBar = () => (
+        openedFromBuyerDashboard ? (
+            <div className="bg-green-700">
+                <DashboardTopBar />
+            </div>
+        ) : null
+    );
+
     if (selectedFarmer) {
         const farmerProducts = Array.isArray(selectedFarmer.products)
             ? selectedFarmer.products
@@ -304,6 +193,8 @@ const FarmerPage = () => {
                         zIndex: 50,
                     }}
                 />
+
+                {renderDashboardTopBar()}
 
                 <div className="min-h-screen bg-gray-50">
                     <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-8">
@@ -338,7 +229,9 @@ const FarmerPage = () => {
                                                 : 'bg-yellow-100 text-yellow-800'
                                                 }`}
                                         >
-                                            {selectedFarmer.verified ? 'Verified' : 'Pending'}
+                                            {selectedFarmer.verified
+                                                ? 'Verified'
+                                                : 'Pending'}
                                         </span>
                                     </div>
 
@@ -424,9 +317,10 @@ const FarmerPage = () => {
             />
 
             <div className="min-h-screen bg-gray-50">
-                {/* Hero section */}
-                <section className="bg-green-700 text-white py-16 px-4 sm:px-6">
-                    <div className="max-w-4xl mx-auto text-center">
+                <section className="bg-green-700 text-white px-4 sm:px-6 pb-16">
+                    {renderDashboardTopBar()}
+
+                    <div className="max-w-4xl mx-auto text-center pt-8">
                         <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4">
                             Meet the Farmers Behind Your Food
                         </h1>
@@ -437,7 +331,6 @@ const FarmerPage = () => {
                     </div>
                 </section>
 
-                {/* Farmer directory */}
                 <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">
                         Explore Farmer Profiles
@@ -488,14 +381,14 @@ const FarmerPage = () => {
                         farmer{filteredFarmers.length !== 1 ? 's' : ''}
                     </p>
 
-                    {filteredFarmers.length === 0 && (
+                    {!loading && !profilesError && filteredFarmers.length === 0 && (
                         <div className="text-center py-16">
                             <div className="text-5xl mb-4">🧑‍🌾</div>
                             <h3 className="text-lg font-bold text-gray-800">
                                 No farmers found
                             </h3>
                             <p className="text-gray-500 text-sm mt-1">
-                                Try selecting a different category.
+                                No registered farmers match this category.
                             </p>
                             <button
                                 onClick={() => setSelectedCategory('All Farmers')}
@@ -552,7 +445,6 @@ const FarmerPage = () => {
                                             {farmer.specialty}
                                         </span>
 
-                                        {/* Available products inside the farmer card */}
                                         <div className="pt-3 border-t border-gray-100">
                                             <h4 className="text-sm font-semibold text-gray-800 mb-2">
                                                 Available Products ({farmerProducts.length})
@@ -594,7 +486,6 @@ const FarmerPage = () => {
                     </div>
                 </section>
 
-                {/* Become a farmer */}
                 <section className="bg-green-700 text-white py-16 px-4 sm:px-6">
                     <div className="max-w-3xl mx-auto text-center">
                         <PiPlant className="w-12 h-12 mx-auto mb-4 text-green-300" />

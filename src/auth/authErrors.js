@@ -3,6 +3,8 @@
 const messages = {
     "auth/email-already-in-use": "An account already exists for this email. Try signing in instead.",
     "auth/invalid-credential": "The email or password is incorrect.",
+    "auth/user-not-found": "No account found with this email. Please sign up.",
+    "auth/wrong-password": "The email or password is incorrect.",
     "auth/invalid-email": "Enter a valid email address.",
     "auth/missing-password": "Enter your password.",
     "auth/weak-password": "Choose a password with at least 6 characters.",

@@ -25,18 +25,17 @@ const FarmerLoginPage = () => {
 
     // Handle form login
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError('');
-        setLoading(true);
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
-        try {
-            await signIn(email.trim(), password);
-        } catch (error) {
-            setError(friendlyError(error));
-        } finally {
-            setLoading(false);
-        }
-    };
+    try {
+        await signIn(email.trim(), password);
+    } catch (error) {
+        setError(friendlyError(error));
+        setLoading(false);
+    }
+};
     return (
         <div className="min-h-[calc(100vh-70px)] flex flex-col lg:flex-row">
             {/* Left side: Image and FarmLink intro */}

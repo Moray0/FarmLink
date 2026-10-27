@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PiPottedPlant } from 'react-icons/pi';
-import { FcGoogle } from 'react-icons/fc';
 import { useAuth } from '../auth/AuthContext';
 import { friendlyError } from '../auth/authErrors';
 import { ROLE_HOME } from '../auth/roles';
@@ -9,12 +8,11 @@ import { ROLE_HOME } from '../auth/roles';
 const BuyerSignupPage = () => {
     const navigate = useNavigate();
     const {
-        signUp,
-        signInWithGoogle,
-        user,
-        role,
-        loading: authLoading,
-    } = useAuth();
+    signUp,
+    user,
+    role,
+    loading: authLoading,
+} = useAuth();
     useEffect(() => {
         if (user && role && !authLoading) {
             navigate(ROLE_HOME[role] || '/', {
@@ -30,40 +28,22 @@ const BuyerSignupPage = () => {
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError('');
-        setLoading(true);
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
-        try {
-            await signUp({
-                name,
-                email,
-                password,
-                role: 'buyer',
-            });
-
-            navigate('/buyerdashboard');
-        } catch (error) {
-            setError(friendlyError(error));
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleGoogleSignUp = async () => {
-        setError('');
-        setLoading(true);
-
-        try {
-            await signInWithGoogle('buyer');
-            navigate('/buyerdashboard');
-        } catch (error) {
-            setError(friendlyError(error));
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    try {
+        await signUp({
+            name,
+            email,
+            password,
+            role: 'buyer',
+        });
+    } catch (error) {
+        setError(friendlyError(error));
+        setLoading(false);
+    }
+};
     return (
         <div className="min-h-[calc(100vh-70px)] flex flex-col lg:flex-row">
             <div
@@ -120,23 +100,6 @@ const BuyerSignupPage = () => {
                             Create your buyer account and start shopping fresh
                         </p>
                     </div>
-
-                    <button
-                        type="button"
-                        onClick={handleGoogleSignUp}
-                        disabled={loading}
-                        className="w-full flex items-center justify-center gap-3 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 font-medium text-sm text-gray-700 cursor-pointer transition mb-5 disabled:opacity-60"
-                    >
-                        <FcGoogle className="w-5 h-5" />
-                        Continue with Google
-                    </button>
-
-                    <div className="flex items-center mb-5">
-                        <div className="flex-1 border-t border-gray-200"></div>
-                        <span className="px-3 text-xs text-gray-400">OR</span>
-                        <div className="flex-1 border-t border-gray-200"></div>
-                    </div>
-
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">

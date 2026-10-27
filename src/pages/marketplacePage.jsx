@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, useScroll } from 'motion/react';
 import {
     PiMagnifyingGlass,
@@ -23,6 +24,7 @@ import {
 import { db } from '../firebase';
 import { useAuth } from '../auth/AuthContext';
 import Footer from '../components/footer';
+import DashboardTopBar from '../components/DashboardTopBar';
 
 const sampleProducts = [
     {
@@ -97,6 +99,10 @@ const formatPrice = (price) =>
     }).format(parsePrice(price));
 
 const MarketplacePage = () => {
+    const location = useLocation();
+    const openedFromBuyerDashboard =
+        location.state?.fromBuyerDashboard === true;
+
     const { scrollYProgress } = useScroll();
     const { user, profile, role, loading: authLoading } = useAuth();
 
@@ -323,7 +329,7 @@ const MarketplacePage = () => {
         (total, item) =>
             total +
             parsePrice(item.price) *
-            Number(item.quantityInCart || 0),
+                Number(item.quantityInCart || 0),
         0
     );
 
@@ -335,7 +341,9 @@ const MarketplacePage = () => {
         }
 
         if (!user || role !== 'buyer') {
-            alert('Please sign in with your buyer account to add products to your cart.');
+            alert(
+                'Please sign in with your buyer account to add products to your cart.'
+            );
             return;
         }
 
@@ -366,10 +374,10 @@ const MarketplacePage = () => {
                 return previousCart.map((item) =>
                     item.id === product.id
                         ? {
-                            ...item,
-                            quantityInCart:
-                                Number(item.quantityInCart || 0) + 1
-                        }
+                              ...item,
+                              quantityInCart:
+                                  Number(item.quantityInCart || 0) + 1
+                          }
                         : item
                 );
             }
@@ -546,7 +554,7 @@ const MarketplacePage = () => {
 
             setCheckoutError(
                 err.message ||
-                'Your order could not be placed. Please try again.'
+                    'Your order could not be placed. Please try again.'
             );
         } finally {
             setPlacingOrder(false);
@@ -573,6 +581,8 @@ const MarketplacePage = () => {
             <div className="min-h-screen bg-gray-50">
                 {/* Marketplace heading and cart button */}
                 <section className="bg-green-700 text-white py-10 px-4 sm:px-6">
+                    {openedFromBuyerDashboard && <DashboardTopBar />}
+
                     <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
                         <div>
                             <h1 className="text-3xl sm:text-4xl font-extrabold">
@@ -588,7 +598,7 @@ const MarketplacePage = () => {
 
                         <button
                             onClick={() => setIsCartOpen(true)}
-                            className="relative bg-white text-green-800 p-3 rounded-full shadow-lg hover:bg-green-50 cursor-pointer shrink-0"
+                            className="relative bg-white mr-10 text-green-800 p-3 rounded-full shadow-lg hover:bg-green-50 cursor-pointer shrink-0"
                             aria-label="Open shopping cart"
                         >
                             <PiShoppingCart className="w-6 h-6 text-green-700" />
@@ -657,10 +667,11 @@ const MarketplacePage = () => {
                                     setSelectedCategory(category);
                                     setCurrentPage(1);
                                 }}
-                                className={`px-4 py-2 rounded-full text-sm font-medium transition ${selectedCategory === category
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-green-50'
-                                    }`}
+                                className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                                    selectedCategory === category
+                                        ? 'bg-green-600 text-white'
+                                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-green-50'
+                                }`}
                             >
                                 {category}
                             </button>
@@ -779,10 +790,11 @@ const MarketplacePage = () => {
                                                         role === 'buyer' &&
                                                         !cartReady)
                                                 }
-                                                className={`px-3 py-1.5 text-sm font-medium text-white rounded-lg ${product.isSample
-                                                    ? 'bg-gray-400 cursor-not-allowed'
-                                                    : 'bg-green-600 hover:bg-green-700 cursor-pointer disabled:opacity-50'
-                                                    }`}
+                                                className={`px-3 py-1.5 text-sm font-medium text-white rounded-lg ${
+                                                    product.isSample
+                                                        ? 'bg-gray-400 cursor-not-allowed'
+                                                        : 'bg-green-600 hover:bg-green-700 cursor-pointer disabled:opacity-50'
+                                                }`}
                                             >
                                                 {product.isSample
                                                     ? 'Sample Only'
@@ -813,10 +825,11 @@ const MarketplacePage = () => {
                                     <button
                                         key={index + 1}
                                         onClick={() => goToPage(index + 1)}
-                                        className={`w-9 h-9 rounded-lg text-sm font-medium ${currentPage === index + 1
-                                            ? 'bg-green-600 text-white'
-                                            : 'text-gray-600 hover:bg-green-50'
-                                            }`}
+                                        className={`w-9 h-9 rounded-lg text-sm font-medium ${
+                                            currentPage === index + 1
+                                                ? 'bg-green-600 text-white'
+                                                : 'text-gray-600 hover:bg-green-50'
+                                        }`}
                                     >
                                         {index + 1}
                                     </button>
@@ -915,7 +928,7 @@ const MarketplacePage = () => {
                                                 <p className="text-sm font-medium">
                                                     {formatPrice(
                                                         item.price *
-                                                        item.quantityInCart
+                                                            item.quantityInCart
                                                     )}
                                                 </p>
                                             </div>

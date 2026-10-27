@@ -51,7 +51,7 @@ const formatDate = (value) => {
 
 const BuyerDashboardPage = () => {
     const navigate = useNavigate();
-    const { user, profile, logOut } = useAuth();
+    const { user, profile, logOut, justSignedUp } = useAuth();
 
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('Dashboard');
@@ -350,7 +350,11 @@ const BuyerDashboardPage = () => {
                 <div className="py-10 text-center text-sm text-gray-500">
                     {saved ? 'You have no saved products yet.' : 'No products are available right now.'}
                     <div className="mt-3">
-                        <Link to="/marketplace" className="font-semibold text-green-700 hover:underline">
+                        <Link
+                            to="/marketplace"
+                            state={{ fromBuyerDashboard: true }}
+                            className="font-semibold text-green-700 hover:underline"
+                        >
                             Browse Marketplace
                         </Link>
                     </div>
@@ -380,7 +384,13 @@ const BuyerDashboardPage = () => {
                                 </button>
                             )}
                             <button
-                                onClick={() => saved ? addSavedProductToCart(product) : navigate('/marketplace')}
+                                onClick={() =>
+                                    saved
+                                        ? addSavedProductToCart(product)
+                                        : navigate('/marketplace', {
+                                            state: { fromBuyerDashboard: true },
+                                        })
+                                }
                                 className="mt-2 w-full rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700"
                             >
                                 {saved ? 'Add to Cart' : 'Shop in Marketplace'}
@@ -404,7 +414,7 @@ const BuyerDashboardPage = () => {
                 </button>
             </div>
 
-            <aside className={`${sidebarOpen ? 'block' : 'hidden'} w-full shrink-0 border-r border-gray-200 bg-white p-5 md:flex md:w-64 md:flex-col md:justify-between`}>
+            <aside className={`${sidebarOpen ? 'block' : 'hidden'} w-full shrink-0 border-r border-gray-200 bg-white p-5 md:fixed md:inset-y-0 md:left-0 md:z-40 md:flex md:h-screen md:w-64 md:flex-col md:justify-between md:overflow-y-auto`}>
                 <div>
                     <div className="mb-6 hidden md:block">
                         <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-green-800">
@@ -421,9 +431,11 @@ const BuyerDashboardPage = () => {
 
                             if (item.link) {
                                 return (
+
                                     <Link
                                         key={item.name}
                                         to={item.link}
+                                        state={{ fromBuyerDashboard: true }}
                                         onClick={() => openTab(item.name)}
                                         className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${active ? 'bg-green-600 text-white' : 'text-gray-700 hover:bg-green-50 hover:text-green-800'}`}
                                     >
@@ -451,19 +463,23 @@ const BuyerDashboardPage = () => {
                         })}
                     </nav>
                 </div>
-
-                <div className="mt-6 border-t border-gray-200 pt-6">
-                    <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
-                        <PiSignOut className="h-5 w-5" />
-                        Logout
-                    </button>
-                </div>
             </aside>
 
-            <main className="min-w-0 flex-1 space-y-6 p-4 md:p-8">
+            <main className="min-w-0 flex-1 space-y-6 p-4 md:ml-64 md:p-8">
+                <div className="flex justify-end">
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-2 rounded-lg bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100"
+                    >
+                        <PiSignOut className="h-5 w-5" />
+                        Log Out
+                    </button>
+                </div>
                 <section className="rounded-xl border border-gray-200 bg-white p-6">
                     <h1 className="text-2xl font-bold text-gray-900">
-                        {activeTab === 'Dashboard' ? `Welcome Back, ${buyerName}!` : activeTab}
+                        {activeTab === 'Dashboard'
+    ? `${justSignedUp ? 'Welcome' : 'Welcome back'}, ${buyerName}!`
+    : activeTab}
                     </h1>
                     <p className="mt-1 text-sm text-gray-600">
                         {activeTab === 'Dashboard'
@@ -494,9 +510,15 @@ const BuyerDashboardPage = () => {
                         <section className="rounded-xl border border-gray-200 bg-white p-5">
                             <h2 className="mb-3 font-bold text-gray-900">Quick Actions</h2>
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                                <Link to="/marketplace" className="rounded-lg bg-green-50 p-3 text-center text-sm font-semibold text-green-800 hover:bg-green-100">
+
+                                <Link
+                                    to="/marketplace"
+                                    state={{ fromBuyerDashboard: true }}
+                                    className="rounded-lg bg-green-50 p-3 text-center text-sm font-semibold text-green-800 hover:bg-green-100"
+                                >
                                     Browse Marketplace
                                 </Link>
+
                                 <button onClick={() => openTab('My Orders')} className="rounded-lg bg-green-50 p-3 text-sm font-semibold text-green-800 hover:bg-green-100">
                                     View My Orders
                                 </button>
@@ -519,7 +541,13 @@ const BuyerDashboardPage = () => {
                         <section className="rounded-xl border border-gray-200 bg-white p-5">
                             <div className="mb-4 flex items-center justify-between">
                                 <h2 className="font-bold text-gray-900">Recommended Products</h2>
-                                <Link to="/marketplace" className="text-xs font-semibold text-green-700 hover:underline">View all</Link>
+                                <Link
+                                    to="/marketplace"
+                                    state={{ fromBuyerDashboard: true }}
+                                    className="text-xs font-semibold text-green-700 hover:underline"
+                                >
+                                    View all
+                                </Link>
                             </div>
                             {loading ? <p className="text-sm text-gray-500">Loading products...</p> : renderProducts(products.slice(0, 3))}
                         </section>
@@ -527,7 +555,15 @@ const BuyerDashboardPage = () => {
                         <section className="rounded-xl border border-gray-200 bg-white p-5">
                             <div className="mb-4 flex items-center justify-between">
                                 <h2 className="font-bold text-gray-900">Featured Farmers</h2>
-                                <Link to="/farmers" className="text-xs font-semibold text-green-700 hover:underline">View all</Link>
+
+                                <Link
+                                    to="/farmers"
+                                    state={{ fromBuyerDashboard: true }}
+                                    className="text-xs font-semibold text-green-700 hover:underline"
+                                >
+                                    View all
+                                </Link>
+
                             </div>
                             {loading ? (
                                 <p className="text-sm text-gray-500">Loading farmers...</p>
@@ -560,7 +596,11 @@ const BuyerDashboardPage = () => {
                             <div className="py-10 text-center">
                                 <PiShoppingCart className="mx-auto h-10 w-10 text-gray-400" />
                                 <p className="mt-3 font-semibold text-gray-800">Your cart is empty.</p>
-                                <Link to="/marketplace" className="mt-4 inline-block rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700">
+                                <Link
+                                    to="/marketplace"
+                                    state={{ fromBuyerDashboard: true }}
+                                    className="mt-4 inline-block rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+                                >
                                     Browse Marketplace
                                 </Link>
                             </div>
@@ -594,7 +634,11 @@ const BuyerDashboardPage = () => {
                                         <p className="text-sm text-gray-500">Total ({cartCount} item(s))</p>
                                         <p className="text-2xl font-bold text-green-700">{formatPrice(cartTotal)}</p>
                                     </div>
-                                    <Link to="/marketplace?cart=open" className="rounded-lg bg-green-600 px-5 py-3 text-sm font-bold text-white hover:bg-green-700">
+                                    <Link
+                                        to="/marketplace?cart=open"
+                                        state={{ fromBuyerDashboard: true }}
+                                        className="rounded-lg bg-green-600 px-5 py-3 text-sm font-bold text-white hover:bg-green-700"
+                                    >
                                         Proceed to Checkout
                                     </Link>
                                 </div>

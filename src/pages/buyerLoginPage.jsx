@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PiPottedPlant } from 'react-icons/pi';
-import { FcGoogle } from 'react-icons/fc';
 import { useAuth } from '../auth/AuthContext';
 import { ROLE_HOME } from '../auth/roles';
 import { friendlyError } from '../auth/authErrors';
@@ -10,6 +9,7 @@ import { friendlyError } from '../auth/authErrors';
 const BuyerLoginPage = () => {
     const navigate = useNavigate();
     const { signIn, user, role, loading: authLoading } = useAuth();
+
     useEffect(() => {
         if (user && role && !authLoading) {
             navigate(ROLE_HOME[role] || '/', {
@@ -34,13 +34,8 @@ const BuyerLoginPage = () => {
             await signIn(email.trim(), password);
         } catch (error) {
             setError(friendlyError(error));
-        } finally {
             setLoading(false);
         }
-    };
-    // Google login will be connected separately
-    const handleGoogleLogin = () => {
-        setError('Google login has not been connected yet.');
     };
 
     return (
@@ -101,22 +96,6 @@ const BuyerLoginPage = () => {
                         <p className="text-sm text-gray-500 mt-1">
                             Log in to your buyer account
                         </p>
-                    </div>
-
-                    {/* Google login */}
-                    <button
-                        type="button"
-                        onClick={handleGoogleLogin}
-                        className="w-full flex items-center justify-center gap-3 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 font-medium text-sm text-gray-700 cursor-pointer transition mb-5"
-                    >
-                        <FcGoogle className="w-5 h-5" />
-                        Continue with Google
-                    </button>
-
-                    <div className="flex items-center mb-5">
-                        <div className="flex-1 border-t border-gray-200"></div>
-                        <span className="px-3 text-xs text-gray-400">OR</span>
-                        <div className="flex-1 border-t border-gray-200"></div>
                     </div>
 
                     {/* Login form */}

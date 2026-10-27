@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import ScrollToTop from './components/ScrollToTop';
 import { AuthProvider } from './auth/AuthContext';
 import ProtectedRoute from './components/protectedRoute';
@@ -14,59 +15,81 @@ import AdminDashboardPage from './pages/admindashboardPage';
 import BuyerDashboardPage from './pages/buyerdashboardPage';
 import FarmerDashboardPage from './pages/farmerdashboardPage';
 
+function AppRoutes() {
+  const { pathname, state } = useLocation();
+
+  const isDashboard = [
+    '/admindashboard',
+    '/buyerdashboard',
+    '/farmerdashboard',
+  ].includes(pathname);
+
+  const isBuyerDashboardPage =
+    ['/marketplace', '/farmers'].includes(pathname) &&
+    state?.fromBuyerDashboard === true;
+
+  return (
+    <>
+      {!isDashboard && !isBuyerDashboardPage && <Header />}
+
+      <ScrollToTop />
+
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/marketplace" element={<MarketplacePage />} />
+        <Route path="/farmers" element={<FarmerPage />} />
+        <Route path="/login" element={<BuyerLoginPage />} />
+        <Route path="/buyer-login" element={<BuyerLoginPage />} />
+        <Route path="/farmer-login" element={<FarmerLoginPage />} />
+        <Route path="/signup" element={<BuyerSignupPage />} />
+        <Route path="/buyer-signup" element={<BuyerSignupPage />} />
+        <Route path="/farmer-signup" element={<FarmerSignupPage />} />
+
+        <Route
+          path="/admindashboard"
+          element={
+            <ProtectedRoute
+              loginPath="/login"
+              allowedRole="admin"
+            >
+              <AdminDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/buyerdashboard"
+          element={
+            <ProtectedRoute
+              loginPath="/buyer-login"
+              allowedRole="buyer"
+            >
+              <BuyerDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/farmerdashboard"
+          element={
+            <ProtectedRoute
+              loginPath="/farmer-login"
+              allowedRole="farmer"
+            >
+              <FarmerDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </>
+  );
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Header />
-        <ScrollToTop />
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/marketplace" element={<MarketplacePage />} />
-          <Route path="/farmers" element={<FarmerPage />} />
-          <Route path="/login" element={<BuyerLoginPage />} />
-          <Route path="/buyer-login" element={<BuyerLoginPage />} />
-          <Route path="/farmer-login" element={<FarmerLoginPage />} />
-          <Route path="/signup" element={<BuyerSignupPage />} />
-          <Route path="/buyer-signup" element={<BuyerSignupPage />} />
-          <Route path="/farmer-signup" element={<FarmerSignupPage />} />
-
-          <Route
-            path="/admindashboard"
-            element={
-              <ProtectedRoute
-                loginPath="/login"
-                allowedRole="admin"
-              >
-                <AdminDashboardPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/buyerdashboard"
-            element={
-              <ProtectedRoute
-                loginPath="/buyer-login"
-                allowedRole="buyer"
-              >
-                <BuyerDashboardPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/farmerdashboard"
-            element={
-              <ProtectedRoute
-                loginPath="/farmer-login"
-                allowedRole="farmer"
-              >
-                <FarmerDashboardPage />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
+        <AppRoutes />
       </BrowserRouter>
     </AuthProvider>
   );

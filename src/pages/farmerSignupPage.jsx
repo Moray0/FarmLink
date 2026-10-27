@@ -31,26 +31,24 @@ const FarmerSignupPage = () => {
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError('');
-        setLoading(true);
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
-        try {
-            await signUp({
-                name,
-                email,
-                password,
-                role: 'farmer',
-                farmName,
-                location,
-            });
-        } catch (error) {
-            setError(friendlyError(error));
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    try {
+        await signUp({
+            name,
+            email,
+            password,
+            role: 'farmer',
+            farmName,
+            location,
+        });
+    } catch (error) {
+        setError(friendlyError(error));
+        setLoading(false);
+    }
+};
     return (
         <div className="min-h-[calc(100vh-70px)] flex flex-col lg:flex-row">
             <div
