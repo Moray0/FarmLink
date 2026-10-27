@@ -34,7 +34,7 @@ Collections: `users`, `farmerProfiles`, `products`, `orders`, `carts`, `savedPro
 
 ## Demo features
 
-- **Payment:** checkout offers a demo card form or pay-on-delivery. No real money moves. Test cards: `4242 4242 4242 4242` (succeeds), `4000 0000 0000 0002` (declined), `4000 0000 0000 9995` (insufficient funds). Only the card brand and last 4 digits are stored.
+- **Payment:** checkout offers a demo card form or pay-on-delivery. No real money moves. Any number with at least one digit (up to 19 digits) is accepted without a checksum check. `4000 0000 0000 0002` simulates a decline and `4000 0000 0000 9995` simulates insufficient funds; other entries simulate success. Only the card brand and last 4 digits are stored.
 - **Stock:** each product has a stock count. Checkout takes stock in a Firestore transaction, and cancelling an order puts it back. Products without a count are treated as unlimited.
 - **Photos:** farmers upload a photo that is resized in the browser and stored on the product document.
 - **Notifications:** a live bell on the buyer and farmer dashboards for new orders, status changes and cancellations.

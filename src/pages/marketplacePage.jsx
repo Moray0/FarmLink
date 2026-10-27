@@ -27,7 +27,6 @@ import Footer from '../components/footer';
 import DashboardTopBar from '../components/dashboardTopBar';
 import { queueNotification, orderLabel } from '../utils/notifications';
 import {
-    DEMO_CARDS,
     detectBrand,
     formatCardNumber,
     formatExpiry,
@@ -1300,28 +1299,6 @@ const MarketplacePage = () => {
 
                                     {paymentMethod === 'card' ? (
                                         <div className="space-y-3 rounded-xl border border-gray-200 p-4">
-                                            <p className="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-800">
-                                                <strong>Demo payment.</strong> No real money
-                                                is charged. Try{' '}
-                                                {DEMO_CARDS.map((card, index) => (
-                                                    <span key={card.number}>
-                                                        {index > 0 && ', '}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                setCardNumber(card.number)
-                                                            }
-                                                            className="font-mono underline"
-                                                            title={card.result}
-                                                        >
-                                                            {card.number}
-                                                        </button>{' '}
-                                                        ({card.result.toLowerCase()})
-                                                    </span>
-                                                ))}
-                                                . Use any future expiry and any 3-digit code.
-                                            </p>
-
                                             <input
                                                 value={cardName}
                                                 onChange={(event) =>
@@ -1398,8 +1375,11 @@ const MarketplacePage = () => {
                                             </div>
 
                                             <p className="text-xs text-gray-500">
-                                                Only the card brand and last 4 digits are
-                                                kept with your order.
+                                                Demo only: no payment is processed. Any
+                                                number with at least one digit is accepted;
+                                                only the
+                                                card brand and last 4 digits are kept with
+                                                your order.
                                             </p>
                                         </div>
                                     ) : (

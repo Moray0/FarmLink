@@ -33,33 +33,14 @@ export function formatExpiry(value) {
         : digits;
 }
 
-function passesLuhn(digits) {
-    let sum = 0;
-    let double = false;
-
-    for (let index = digits.length - 1; index >= 0; index -= 1) {
-        let digit = Number(digits[index]);
-
-        if (double) {
-            digit *= 2;
-            if (digit > 9) digit -= 9;
-        }
-
-        sum += digit;
-        double = !double;
-    }
-
-    return sum % 10 === 0;
-}
-
 // Returns an error message, or an empty string when the card details are valid.
 export function validateCard({ name, number, expiry, cvv }) {
     if (!name.trim()) return 'Enter the name on the card.';
 
     const digits = digitsOnly(number);
 
-    if (digits.length < 13 || digits.length > 19 || !passesLuhn(digits)) {
-        return 'Enter a valid card number.';
+    if (!digits) {
+        return 'Enter a card number.';
     }
 
     const match = /^(\d{2})\/(\d{2})$/.exec(expiry);
