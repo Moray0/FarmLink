@@ -689,7 +689,7 @@ const MarketplacePage = () => {
 
             setOrderSuccess(
                 receipt
-                    ? `Payment received (demo, ref ${receipt.reference}). Your order ${orderLabel(orderRef.id)} was placed and is awaiting confirmation.`
+                    ? `Payment received (ref ${receipt.reference}). Your order ${orderLabel(orderRef.id)} was placed and is awaiting confirmation.`
                     : `Your order ${orderLabel(orderRef.id)} was placed. You will pay on delivery.`
             );
         } catch (err) {
