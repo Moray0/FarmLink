@@ -1,11 +1,16 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ---------- Helpers ----------
+
     function signedIn() {
       return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
     }
 
     function isAdmin() {
@@ -17,19 +22,37 @@ service cloud.firestore {
       return role in ["admin", "farmer", "buyer"];
     }
 
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isFarmer() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userRole() == "farmer";
+    }
+
+    function isBuyer() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userRole() == "buyer";
+    }
+
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // ---------- Users (private account records) ----------
+
     match /users/{userId} {
 
-      allow create: if signedIn()
-        && request.auth.uid == userId
+      allow create: if isOwner(userId)
         && request.resource.data.uid == userId
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.displayName is string
         && (
           request.resource.data.role in ["farmer", "buyer"]
-          || (
-            request.resource.data.role == "admin"
-            && isAdmin()
-          )
+          || (request.resource.data.role == "admin" && isAdmin())
         )
         && request.resource.data.keys().hasOnly([
           "uid",
@@ -37,33 +60,193 @@ service cloud.firestore {
           "displayName",
           "role",
           "createdAt",
-          "farmName"
+          "farmName",
+          "location"
         ]);
 
-      allow get: if signedIn()
-        && (
-          request.auth.uid == userId
-          || isAdmin()
-        );
+      allow get: if isOwner(userId) || isAdmin();
 
       allow list: if isAdmin();
 
       allow update: if signedIn()
         && (
+          // Users may edit their own display details, never role or verified.
           (
-            request.auth.uid == userId
-            && request.resource.data.diff(resource.data)
-              .affectedKeys().hasOnly(["displayName"])
+            isOwner(userId)
+            && changedKeys().hasOnly(["displayName", "farmName", "location"])
           )
+          // The admin can change roles and approve farmers.
           || (
             isAdmin()
-            && request.resource.data.diff(resource.data)
-              .affectedKeys().hasOnly(["role"])
+            && changedKeys().hasOnly(["role", "verified", "verifiedAt"])
             && validRole(request.resource.data.role)
           )
         );
 
       allow delete: if isAdmin();
+    }
+
+    // ---------- Farmer profiles (public) ----------
+
+    match /farmerProfiles/{farmerId} {
+
+      allow read: if true;
+
+      allow create: if (
+          isOwner(farmerId)
+          && isFarmer()
+          && request.resource.data.uid == farmerId
+          && request.resource.data.role == "farmer"
+          && request.resource.data.verified == false
+          && request.resource.data.keys().hasOnly([
+            "uid",
+            "displayName",
+            "farmName",
+            "location",
+            "role",
+            "verified",
+            "createdAt"
+          ])
+        )
+        || isAdmin();
+
+      allow update: if (
+          isOwner(farmerId)
+          && changedKeys().hasOnly(["displayName", "farmName", "location"])
+        )
+        || (
+          isAdmin()
+          && changedKeys().hasOnly(["verified", "verifiedAt"])
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    // ---------- Products (public catalogue) ----------
+
+    match /products/{productId} {
+
+      allow read: if true;
+
+      allow create: if isFarmer()
+        && request.resource.data.farmerId == request.auth.uid
+        && request.resource.data.status == "Available"
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.keys().hasOnly([
+          "farmerId",
+          "farmerName",
+          "farmName",
+          "location",
+          "name",
+          "category",
+          "price",
+          "quantity",
+          "status",
+          "image",
+          "createdAt"
+        ]);
+
+      allow update: if (
+          isOwner(resource.data.farmerId)
+          && changedKeys().hasOnly([
+            "name",
+            "category",
+            "price",
+            "quantity",
+            "status",
+            "image",
+            "farmName",
+            "farmerName",
+            "location"
+          ])
+        )
+        || (
+          isAdmin()
+          && changedKeys().hasOnly(["verified", "verifiedAt"])
+        );
+
+      allow delete: if isOwner(resource.data.farmerId) || isAdmin();
+    }
+
+    // ---------- Orders ----------
+
+    match /orders/{orderId} {
+
+      allow read: if signedIn()
+        && (
+          resource.data.buyerId == request.auth.uid
+          || request.auth.uid in resource.data.farmerIds
+          || isAdmin()
+        );
+
+      // Only buyers can place orders, always for themselves and as Pending.
+      allow create: if isBuyer()
+        && request.resource.data.buyerId == request.auth.uid
+        && request.resource.data.status == "Pending"
+        && request.resource.data.items is list
+        && request.resource.data.items.size() > 0
+        && request.resource.data.items.size() <= 50
+        && request.resource.data.farmerIds is list
+        && request.resource.data.farmerIds.size() > 0
+        && request.resource.data.farmerIds.size() <= 50
+        && request.resource.data.totalAmount is number
+        && request.resource.data.totalAmount > 0
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.keys().hasOnly([
+          "buyerId",
+          "buyerName",
+          "buyerEmail",
+          "buyerPhone",
+          "deliveryAddress",
+          "items",
+          "farmerIds",
+          "totalAmount",
+          "status",
+          "createdAt"
+        ]);
+
+      // Farmers on the order can only move the status forward:
+      // Pending -> Processing -> Completed.
+      allow update: if signedIn()
+        && changedKeys().hasOnly(["status"])
+        && (
+          (
+            request.auth.uid in resource.data.farmerIds
+            && (
+              (resource.data.status == "Pending"
+                && request.resource.data.status == "Processing")
+              || (resource.data.status == "Processing"
+                && request.resource.data.status == "Completed")
+            )
+          )
+          || isAdmin()
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    // ---------- Carts (private to the buyer) ----------
+
+    match /carts/{userId} {
+
+      allow read, delete: if isOwner(userId);
+
+      allow create, update: if isOwner(userId)
+        && request.resource.data.buyerId == userId
+        && request.resource.data.items is list
+        && request.resource.data.items.size() <= 100
+        && request.resource.data.keys().hasOnly([
+          "buyerId",
+          "items",
+          "updatedAt"
+        ]);
+    }
+
+    // ---------- Saved products (private to the buyer) ----------
+
+    match /savedProducts/{userId}/items/{productId} {
+      allow read, write: if isOwner(userId);
     }
   }
 }

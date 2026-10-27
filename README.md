@@ -1,16 +1,37 @@
-# React + Vite
+# FarmLink
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A marketplace connecting farmers and buyers. Built with React, Vite, Tailwind CSS and Firebase (Auth + Firestore).
 
-Currently, two official plugins are available:
+## Roles
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Buyer**: browses the marketplace, saves a cart, places orders.
+- **Farmer**: lists products and moves orders through Pending, Processing and Completed.
+- **Admin**: approves farmers and manages users. The admin account is the email in `src/auth/roles.js` (keep it in sync with `firestore.rules`).
 
-## React Compiler
+## Setup
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+cp .env.example .env   # then fill in your Firebase web app config
+npm run dev
+```
 
-## Expanding the Oxlint configuration
+## Scripts
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+- `npm run dev` start the dev server
+- `npm run build` production build
+- `npm run lint` run Oxlint
+
+## Firestore rules
+
+Security rules live in `firestore.rules` and must be published for the app to work:
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+Collections: `users`, `farmerProfiles`, `products`, `orders`, `carts`, `savedProducts`.
+
+## Deploy
+
+Deployed on Vercel. `vercel.json` rewrites all routes to the SPA entry.

@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
+import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from 'firebase/firestore';
 
@@ -22,5 +22,12 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 
 
-// Initialize Analytics
-export const analytics = getAnalytics(app);
+// Initialize Analytics only where the browser supports it
+// (it throws in some privacy browsers and non-browser environments).
+export let analytics = null;
+
+isSupported()
+  .then((supported) => {
+    if (supported) analytics = getAnalytics(app);
+  })
+  .catch(() => {});

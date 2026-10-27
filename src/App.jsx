@@ -1,5 +1,5 @@
 
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import ScrollToTop from './components/ScrollToTop';
 import { AuthProvider } from './auth/AuthContext';
 import ProtectedRoute from './components/protectedRoute';
@@ -14,6 +14,21 @@ import FarmerSignupPage from './pages/farmerSignupPage';
 import AdminDashboardPage from './pages/admindashboardPage';
 import BuyerDashboardPage from './pages/buyerdashboardPage';
 import FarmerDashboardPage from './pages/farmerdashboardPage';
+
+function NotFoundPage() {
+  return (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4">
+      <h1 className="text-5xl font-extrabold text-green-700">404</h1>
+      <p className="mt-3 text-gray-600">We couldn't find that page.</p>
+      <Link
+        to="/"
+        className="mt-6 px-5 py-2 rounded-lg bg-green-700 text-white font-semibold hover:bg-green-800"
+      >
+        Back to home
+      </Link>
+    </div>
+  );
+}
 
 function AppRoutes() {
   const { pathname, state } = useLocation();
@@ -80,6 +95,8 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </>
   );

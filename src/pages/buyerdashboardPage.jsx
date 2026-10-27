@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { db } from '../firebase.js';
 import {
     collection,
+    deleteDoc,
     doc,
     getDoc,
     getDocs,
@@ -25,7 +26,6 @@ import {
     PiSignOut,
     PiList,
     PiX,
-    PiTrash,
 } from 'react-icons/pi';
 
 const formatPrice = (value) => {
@@ -253,7 +253,6 @@ const BuyerDashboardPage = () => {
 
     const removeSavedProduct = async (productId) => {
         try {
-            const { deleteDoc } = await import('firebase/firestore');
             await deleteDoc(doc(db, 'savedProducts', user.uid, 'items', productId));
             setSavedProducts((previous) => previous.filter((item) => item.id !== productId));
         } catch (error) {
