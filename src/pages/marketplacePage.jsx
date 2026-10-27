@@ -11,12 +11,12 @@ import {
     PiCheckCircle
 } from 'react-icons/pi';
 import {
-    addDoc,
     collection,
     doc,
     getDoc,
     getDocs,
     query,
+    runTransaction,
     serverTimestamp,
     setDoc,
     where
@@ -25,6 +25,15 @@ import { db } from '../firebase';
 import { useAuth } from '../auth/AuthContext';
 import Footer from '../components/footer';
 import DashboardTopBar from '../components/dashboardTopBar';
+import { queueNotification, orderLabel } from '../utils/notifications';
+import {
+    DEMO_CARDS,
+    detectBrand,
+    formatCardNumber,
+    formatExpiry,
+    processDemoPayment,
+    validateCard
+} from '../utils/payment';
 
 const sampleProducts = [
     {
@@ -126,8 +135,15 @@ const MarketplacePage = () => {
     const [buyerPhone, setBuyerPhone] = useState('');
     const [deliveryAddress, setDeliveryAddress] = useState('');
 
+    const [paymentMethod, setPaymentMethod] = useState('card');
+    const [cardName, setCardName] = useState('');
+    const [cardNumber, setCardNumber] = useState('');
+    const [cardExpiry, setCardExpiry] = useState('');
+    const [cardCvv, setCardCvv] = useState('');
+
     const [checkoutError, setCheckoutError] = useState('');
     const [placingOrder, setPlacingOrder] = useState(false);
+    const [placingStep, setPlacingStep] = useState('');
     const [orderSuccess, setOrderSuccess] = useState('');
 
     // Set the buyer's name from their account.
@@ -203,9 +219,15 @@ const MarketplacePage = () => {
 
         const saveCart = async () => {
             try {
+                // Photos are not saved in the cart to keep it small.
+                // They are looked up from the product list when shown.
                 await setDoc(doc(db, 'carts', user.uid), {
                     buyerId: user.uid,
-                    items: cart,
+                    items: cart.map((cartItem) => {
+                        const saved = { ...cartItem };
+                        delete saved.image;
+                        return saved;
+                    }),
                     updatedAt: serverTimestamp()
                 });
             } catch (err) {
@@ -254,6 +276,11 @@ const MarketplacePage = () => {
                             data.state ||
                             'Location not provided',
                         image: data.image || '',
+                        // null means the farmer does not track stock.
+                        stock:
+                            typeof data.stock === 'number'
+                                ? data.stock
+                                : null,
                         isSample: false
                     };
                 });
@@ -362,6 +389,22 @@ const MarketplacePage = () => {
             return;
         }
 
+        const alreadyInCart = Number(
+            cart.find((item) => item.id === product.id)?.quantityInCart || 0
+        );
+
+        if (
+            typeof product.stock === 'number' &&
+            alreadyInCart + 1 > product.stock
+        ) {
+            alert(
+                product.stock === 0
+                    ? `${product.name} is sold out.`
+                    : `Only ${product.stock} of ${product.name} available, and you already have ${alreadyInCart} in your cart.`
+            );
+            return;
+        }
+
         setOrderSuccess('');
         setCartError('');
 
@@ -391,6 +434,12 @@ const MarketplacePage = () => {
             ];
         });
     };
+
+    // Cart items are saved without their photo, so find it in the product list.
+    const cartItemImage = (item) =>
+        item.image ||
+        firestoreProducts.find((product) => product.id === item.id)?.image ||
+        '';
 
     // Remove a product from the cart.
     const removeFromCart = (productId) => {
@@ -450,28 +499,63 @@ const MarketplacePage = () => {
             return;
         }
 
+        if (paymentMethod === 'card') {
+            const cardProblem = validateCard({
+                name: cardName,
+                number: cardNumber,
+                expiry: cardExpiry,
+                cvv: cardCvv
+            });
+
+            if (cardProblem) {
+                setCheckoutError(cardProblem);
+                return;
+            }
+        }
+
         setPlacingOrder(true);
 
-        try {
-            // Check each product again before placing the order.
-            const verifiedItems = await Promise.all(
-                cart.map(async (item) => {
-                    const productRef = doc(db, 'products', item.id);
-                    const productSnapshot = await getDoc(productRef);
+        let receipt = null;
 
-                    if (!productSnapshot.exists()) {
+        try {
+            // Step 1: take the (demo) card payment.
+            if (paymentMethod === 'card') {
+                setPlacingStep('Processing payment...');
+                receipt = await processDemoPayment({ number: cardNumber });
+            }
+
+            // Step 2: in one transaction, re-check every product, take the
+            // stock and create the order, so two buyers can never buy the
+            // same last item.
+            setPlacingStep('Placing order...');
+
+            const orderRef = doc(collection(db, 'orders'));
+
+            await runTransaction(db, async (transaction) => {
+                const productRefs = cart.map((item) =>
+                    doc(db, 'products', item.id)
+                );
+
+                const snapshots = await Promise.all(
+                    productRefs.map((ref) => transaction.get(ref))
+                );
+
+                const verifiedItems = [];
+                const stockChanges = [];
+
+                snapshots.forEach((productSnapshot, index) => {
+                    const item = cart[index];
+
+                    if (
+                        !productSnapshot.exists() ||
+                        productSnapshot.data().status !== 'Available'
+                    ) {
                         throw new Error(
                             `${item.name} is no longer available. Remove it from your cart.`
                         );
                     }
 
                     const productData = productSnapshot.data();
-
-                    if (productData.status !== 'Available') {
-                        throw new Error(
-                            `${item.name} is no longer available. Remove it from your cart.`
-                        );
-                    }
 
                     if (
                         !productData.farmerId ||
@@ -500,7 +584,23 @@ const MarketplacePage = () => {
                         );
                     }
 
-                    return {
+                    if (typeof productData.stock === 'number') {
+                        if (itemQuantity > productData.stock) {
+                            throw new Error(
+                                `Only ${productData.stock} of ${item.name} left in stock. Reduce the quantity in your cart.`
+                            );
+                        }
+
+                        const remaining = productData.stock - itemQuantity;
+
+                        stockChanges.push({
+                            ref: productRefs[index],
+                            stock: remaining,
+                            status: remaining === 0 ? 'Sold Out' : 'Available'
+                        });
+                    }
+
+                    verifiedItems.push({
                         productId: item.id,
                         productName: productData.name || item.name,
                         farmerId: productData.farmerId,
@@ -510,54 +610,104 @@ const MarketplacePage = () => {
                             item.farmer,
                         unitPrice: currentPrice,
                         quantity: itemQuantity,
-                        subtotal: currentPrice * itemQuantity,
-                        image: productData.image || ''
-                    };
-                })
-            );
+                        subtotal: currentPrice * itemQuantity
+                    });
+                });
 
-            const totalAmount = verifiedItems.reduce(
-                (total, item) => total + item.subtotal,
-                0
-            );
+                const totalAmount = verifiedItems.reduce(
+                    (total, item) => total + item.subtotal,
+                    0
+                );
 
-            const farmerIds = [
-                ...new Set(
-                    verifiedItems.map((item) => item.farmerId)
-                )
-            ];
+                const farmerIds = [
+                    ...new Set(verifiedItems.map((item) => item.farmerId))
+                ];
 
-            await addDoc(collection(db, 'orders'), {
-                buyerId: user.uid,
-                buyerName: buyerName.trim(),
-                buyerEmail: user.email || '',
-                buyerPhone: buyerPhone.trim(),
-                deliveryAddress: deliveryAddress.trim(),
-                items: verifiedItems,
-                farmerIds,
-                totalAmount,
-                status: 'Pending',
-                createdAt: serverTimestamp()
+                stockChanges.forEach((change) => {
+                    transaction.update(change.ref, {
+                        stock: change.stock,
+                        status: change.status
+                    });
+                });
+
+                transaction.set(orderRef, {
+                    buyerId: user.uid,
+                    buyerName: buyerName.trim(),
+                    buyerEmail: user.email || '',
+                    buyerPhone: buyerPhone.trim(),
+                    deliveryAddress: deliveryAddress.trim(),
+                    items: verifiedItems,
+                    farmerIds,
+                    totalAmount,
+                    status: 'Pending',
+                    paymentMethod,
+                    paymentStatus: receipt
+                        ? 'Paid (Demo)'
+                        : 'Pay on Delivery',
+                    paymentReference: receipt?.reference || '',
+                    cardBrand: receipt?.brand || '',
+                    cardLast4: receipt?.last4 || '',
+                    createdAt: serverTimestamp()
+                });
+
+                const label = orderLabel(orderRef.id);
+
+                farmerIds.forEach((farmerId) => {
+                    queueNotification(transaction, {
+                        userId: farmerId,
+                        actorId: user.uid,
+                        type: 'order_placed',
+                        title: `New order ${label}`,
+                        message: `${buyerName.trim()} ordered ${
+                            verifiedItems.filter(
+                                (item) => item.farmerId === farmerId
+                            ).length
+                        } of your product(s).`,
+                        orderId: orderRef.id
+                    });
+                });
+
+                queueNotification(transaction, {
+                    userId: user.uid,
+                    actorId: user.uid,
+                    type: 'order_placed',
+                    title: `Order ${label} placed`,
+                    message:
+                        'Your order was received and is waiting for the farmer to accept it.',
+                    orderId: orderRef.id
+                });
             });
 
             // Empty the cart. The cart-saving effect will update Firestore.
             setCart([]);
             setBuyerPhone('');
             setDeliveryAddress('');
+            setCardName('');
+            setCardNumber('');
+            setCardExpiry('');
+            setCardCvv('');
             setIsCheckoutOpen(false);
 
             setOrderSuccess(
-                'Your order was placed successfully and is awaiting confirmation.'
+                receipt
+                    ? `Payment received (demo, ref ${receipt.reference}). Your order ${orderLabel(orderRef.id)} was placed and is awaiting confirmation.`
+                    : `Your order ${orderLabel(orderRef.id)} was placed. You will pay on delivery.`
             );
         } catch (err) {
             console.error('Error placing order:', err);
 
             setCheckoutError(
-                err.message ||
-                    'Your order could not be placed. Please try again.'
+                receipt
+                    ? `${
+                          err.message ||
+                          'Your order could not be placed.'
+                      } You were not charged (demo payment reversed).`
+                    : err.message ||
+                          'Your order could not be placed. Please try again.'
             );
         } finally {
             setPlacingOrder(false);
+            setPlacingStep('');
         }
     };
 
@@ -773,8 +923,22 @@ const MarketplacePage = () => {
                                         </p>
 
                                         <p className="text-sm text-gray-600">
-                                            Available quantity: {product.quantity}
+                                            Pack size: {product.quantity}
                                         </p>
+
+                                        {typeof product.stock === 'number' && (
+                                            <p
+                                                className={`text-xs font-semibold ${
+                                                    product.stock <= 5
+                                                        ? 'text-amber-700'
+                                                        : 'text-green-700'
+                                                }`}
+                                            >
+                                                {product.stock <= 5
+                                                    ? `Only ${product.stock} left in stock`
+                                                    : `${product.stock} in stock`}
+                                            </p>
+                                        )}
 
                                         <div className="flex items-center justify-between gap-2 pt-3 border-t border-gray-100">
                                             <span className="text-lg font-bold text-green-700">
@@ -786,6 +950,7 @@ const MarketplacePage = () => {
                                                 disabled={
                                                     product.isSample ||
                                                     authLoading ||
+                                                    product.stock === 0 ||
                                                     (user?.uid &&
                                                         role === 'buyer' &&
                                                         !cartReady)
@@ -903,9 +1068,9 @@ const MarketplacePage = () => {
                                             key={item.id}
                                             className="flex items-center gap-4 py-4 border-b border-gray-100"
                                         >
-                                            {item.image ? (
+                                            {cartItemImage(item) ? (
                                                 <img
-                                                    src={item.image}
+                                                    src={cartItemImage(item)}
                                                     alt={item.name}
                                                     className="w-14 h-14 rounded-lg object-cover"
                                                 />
@@ -985,7 +1150,7 @@ const MarketplacePage = () => {
                                     </h2>
 
                                     <p className="mt-1 text-sm text-gray-500">
-                                        Confirm your delivery details.
+                                        Confirm your delivery and payment details.
                                     </p>
                                 </div>
 
@@ -1098,6 +1263,154 @@ const MarketplacePage = () => {
                                     />
                                 </div>
 
+                                {/* Payment */}
+                                <fieldset className="space-y-3">
+                                    <legend className="mb-1.5 block text-sm font-medium text-gray-700">
+                                        Payment method
+                                    </legend>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {[
+                                            { value: 'card', label: 'Pay by card' },
+                                            { value: 'cod', label: 'Pay on delivery' }
+                                        ].map((option) => (
+                                            <label
+                                                key={option.value}
+                                                className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium ${
+                                                    paymentMethod === option.value
+                                                        ? 'border-green-600 bg-green-50 text-green-800'
+                                                        : 'border-gray-300 text-gray-700'
+                                                }`}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    name="paymentMethod"
+                                                    value={option.value}
+                                                    checked={paymentMethod === option.value}
+                                                    onChange={() =>
+                                                        setPaymentMethod(option.value)
+                                                    }
+                                                    disabled={placingOrder}
+                                                    className="accent-green-600"
+                                                />
+                                                {option.label}
+                                            </label>
+                                        ))}
+                                    </div>
+
+                                    {paymentMethod === 'card' ? (
+                                        <div className="space-y-3 rounded-xl border border-gray-200 p-4">
+                                            <p className="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-800">
+                                                <strong>Demo payment.</strong> No real money
+                                                is charged. Try{' '}
+                                                {DEMO_CARDS.map((card, index) => (
+                                                    <span key={card.number}>
+                                                        {index > 0 && ', '}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setCardNumber(card.number)
+                                                            }
+                                                            className="font-mono underline"
+                                                            title={card.result}
+                                                        >
+                                                            {card.number}
+                                                        </button>{' '}
+                                                        ({card.result.toLowerCase()})
+                                                    </span>
+                                                ))}
+                                                . Use any future expiry and any 3-digit code.
+                                            </p>
+
+                                            <input
+                                                value={cardName}
+                                                onChange={(event) =>
+                                                    setCardName(event.target.value)
+                                                }
+                                                autoComplete="cc-name"
+                                                maxLength={60}
+                                                disabled={placingOrder}
+                                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 outline-none focus:ring-2 focus:ring-green-500"
+                                                placeholder="Name on card"
+                                                aria-label="Name on card"
+                                            />
+
+                                            <div className="relative">
+                                                <input
+                                                    value={cardNumber}
+                                                    onChange={(event) =>
+                                                        setCardNumber(
+                                                            formatCardNumber(
+                                                                event.target.value
+                                                            )
+                                                        )
+                                                    }
+                                                    inputMode="numeric"
+                                                    autoComplete="cc-number"
+                                                    disabled={placingOrder}
+                                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 pr-24 font-mono outline-none focus:ring-2 focus:ring-green-500"
+                                                    placeholder="Card number"
+                                                    aria-label="Card number"
+                                                />
+
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-500">
+                                                    {detectBrand(cardNumber) !== 'Card'
+                                                        ? detectBrand(cardNumber)
+                                                        : ''}
+                                                </span>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <input
+                                                    value={cardExpiry}
+                                                    onChange={(event) =>
+                                                        setCardExpiry(
+                                                            formatExpiry(
+                                                                event.target.value
+                                                            )
+                                                        )
+                                                    }
+                                                    inputMode="numeric"
+                                                    autoComplete="cc-exp"
+                                                    disabled={placingOrder}
+                                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 font-mono outline-none focus:ring-2 focus:ring-green-500"
+                                                    placeholder="MM/YY"
+                                                    aria-label="Expiry date"
+                                                />
+
+                                                <input
+                                                    value={cardCvv}
+                                                    onChange={(event) =>
+                                                        setCardCvv(
+                                                            event.target.value
+                                                                .replace(/\D/g, '')
+                                                                .slice(0, 4)
+                                                        )
+                                                    }
+                                                    inputMode="numeric"
+                                                    autoComplete="cc-csc"
+                                                    type="password"
+                                                    disabled={placingOrder}
+                                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 font-mono outline-none focus:ring-2 focus:ring-green-500"
+                                                    placeholder="CVV"
+                                                    aria-label="Security code"
+                                                />
+                                            </div>
+
+                                            <p className="text-xs text-gray-500">
+                                                Only the card brand and last 4 digits are
+                                                kept with your order.
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <p className="rounded-xl border border-gray-200 p-4 text-sm text-gray-600">
+                                            Pay the farmer when your order is delivered. The
+                                            order is marked as paid once the farmer completes
+                                            it.
+                                        </p>
+                                    )}
+                                </fieldset>
+
                                 {checkoutError && (
                                     <p
                                         role="alert"
@@ -1129,8 +1442,10 @@ const MarketplacePage = () => {
                                         className="flex-1 rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
                                     >
                                         {placingOrder
-                                            ? 'Placing Order...'
-                                            : 'Place Order'}
+                                            ? placingStep || 'Placing Order...'
+                                            : paymentMethod === 'card'
+                                                ? `Pay ${formatPrice(totalCartPrice)}`
+                                                : 'Place Order'}
                                     </button>
                                 </div>
                             </form>

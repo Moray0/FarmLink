@@ -14,6 +14,8 @@ import {
     serverTimestamp,
 } from 'firebase/firestore';
 import { Link, useNavigate } from 'react-router-dom';
+import NotificationBell from '../components/NotificationBell';
+import { cancelOrder } from '../utils/orders';
 import {
     PiPottedPlant,
     PiHouse,
@@ -64,6 +66,7 @@ const BuyerDashboardPage = () => {
 
     const [loading, setLoading] = useState(true);
     const [dashboardError, setDashboardError] = useState('');
+    const [cancellingId, setCancellingId] = useState(null);
 
     useEffect(() => {
         let active = true;
@@ -181,9 +184,14 @@ const BuyerDashboardPage = () => {
         if (!user?.uid) return;
 
         try {
+            // Photos are not saved in the cart to keep it small.
             await setDoc(doc(db, 'carts', user.uid), {
                 buyerId: user.uid,
-                items: updatedCart,
+                items: updatedCart.map((cartItem) => {
+                    const saved = { ...cartItem };
+                    delete saved.image;
+                    return saved;
+                }),
                 updatedAt: serverTimestamp(),
             });
         } catch (error) {
@@ -192,7 +200,29 @@ const BuyerDashboardPage = () => {
         }
     };
 
+    // Cart items are saved without their photo, so find it in the product list.
+    const cartItemImage = (item) =>
+        item.image ||
+        products.find((product) => product.id === item.id)?.image ||
+        '';
+
     const updateCartQuantity = (productId, change) => {
+        const liveProduct = products.find((product) => product.id === productId);
+        const currentItem = cart.find((item) => item.id === productId);
+
+        if (
+            change > 0 &&
+            typeof liveProduct?.stock === 'number' &&
+            Number(currentItem?.quantityInCart || 0) + change > liveProduct.stock
+        ) {
+            setDashboardError(
+                `Only ${liveProduct.stock} of ${currentItem?.name || 'this product'} in stock.`
+            );
+            return;
+        }
+
+        setDashboardError('');
+
         const updatedCart = cart
             .map((item) => item.id === productId
                 ? { ...item, quantityInCart: item.quantityInCart + change }
@@ -284,6 +314,42 @@ const BuyerDashboardPage = () => {
         setActiveTab('My Cart');
     };
 
+    // Cancel a pending order. Stock is returned and the farmer is notified.
+    const handleCancelOrder = async (order) => {
+        if (
+            !window.confirm(
+                'Cancel this order? Any card payment will be refunded (demo).'
+            )
+        ) {
+            return;
+        }
+
+        setCancellingId(order.id);
+        setDashboardError('');
+
+        try {
+            const result = await cancelOrder(
+                order,
+                user.uid,
+                'buyer',
+                buyerName
+            );
+
+            setOrders((previous) =>
+                previous.map((item) =>
+                    item.id === order.id ? { ...item, ...result } : item
+                )
+            );
+        } catch (error) {
+            console.error('Could not cancel order:', error);
+            setDashboardError(
+                error.message || 'Could not cancel this order. Please try again.'
+            );
+        } finally {
+            setCancellingId(null);
+        }
+    };
+
     const renderOrders = (limit = null) => {
         const visibleOrders = limit === null ? orders : orders.slice(0, limit);
 
@@ -296,13 +362,15 @@ const BuyerDashboardPage = () => {
                             <th className="pb-3 pr-4">Product</th>
                             <th className="pb-3 pr-4">Order Date</th>
                             <th className="pb-3 pr-4">Amount</th>
-                            <th className="pb-3">Status</th>
+                            <th className="pb-3 pr-4">Payment</th>
+                            <th className="pb-3 pr-4">Status</th>
+                            <th className="pb-3">Action</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                         {!loading && visibleOrders.length === 0 && (
                             <tr>
-                                <td colSpan="5" className="py-8 text-center text-gray-500">
+                                <td colSpan="7" className="py-8 text-center text-gray-500">
                                     You have no orders yet. Browse the marketplace to get started.
                                 </td>
                             </tr>
@@ -319,7 +387,9 @@ const BuyerDashboardPage = () => {
                                 ? 'bg-green-100 text-green-800'
                                 : status.toLowerCase() === 'cancelled'
                                     ? 'bg-red-100 text-red-800'
-                                    : 'bg-amber-100 text-amber-800';
+                                    : status.toLowerCase() === 'processing'
+                                        ? 'bg-blue-100 text-blue-800'
+                                        : 'bg-amber-100 text-amber-800';
 
                             return (
                                 <tr key={order.id}>
@@ -329,10 +399,38 @@ const BuyerDashboardPage = () => {
                                     <td className="py-3 pr-4 whitespace-nowrap font-semibold text-green-700">
                                         {formatPrice(order.totalAmount)}
                                     </td>
-                                    <td className="py-3">
+                                    <td className="py-3 pr-4 text-xs">
+                                        <span className="font-semibold text-gray-800 whitespace-nowrap">
+                                            {order.paymentStatus || 'Not recorded'}
+                                        </span>
+                                        {order.cardLast4 && (
+                                            <span className="block text-gray-500 whitespace-nowrap">
+                                                {order.cardBrand} •••• {order.cardLast4}
+                                            </span>
+                                        )}
+                                        {order.paymentReference && (
+                                            <span className="block font-mono text-[10px] text-gray-400">
+                                                {order.paymentReference}
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className="py-3 pr-4">
                                         <span className={`rounded px-2 py-1 text-xs font-semibold ${statusStyle}`}>
                                             {status}
                                         </span>
+                                    </td>
+                                    <td className="py-3">
+                                        {status.toLowerCase() === 'pending' ? (
+                                            <button
+                                                onClick={() => handleCancelOrder(order)}
+                                                disabled={cancellingId === order.id}
+                                                className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-50"
+                                            >
+                                                {cancellingId === order.id ? 'Cancelling...' : 'Cancel order'}
+                                            </button>
+                                        ) : (
+                                            <span className="text-xs text-gray-400">—</span>
+                                        )}
                                     </td>
                                 </tr>
                             );
@@ -465,7 +563,8 @@ const BuyerDashboardPage = () => {
             </aside>
 
             <main className="min-w-0 flex-1 space-y-6 p-4 md:ml-64 md:p-8">
-                <div className="flex justify-end">
+                <div className="flex items-center justify-end gap-3">
+                    <NotificationBell />
                     <button
                         onClick={handleLogout}
                         className="flex items-center gap-2 rounded-lg bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100"
@@ -608,8 +707,8 @@ const BuyerDashboardPage = () => {
                                 <div className="space-y-4">
                                     {cart.map((item) => (
                                         <div key={item.id} className="flex flex-wrap items-center gap-4 border-b border-gray-100 pb-4">
-                                            {item.image ? (
-                                                <img src={item.image} alt={item.name} className="h-16 w-16 rounded-lg object-cover" />
+                                            {cartItemImage(item) ? (
+                                                <img src={cartItemImage(item)} alt={item.name} className="h-16 w-16 rounded-lg object-cover" />
                                             ) : (
                                                 <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-green-50">🌾</div>
                                             )}

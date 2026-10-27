@@ -14,6 +14,9 @@ import {
     updateDoc,
 } from 'firebase/firestore';
 import { db } from '../firebase.js';
+import NotificationBell from '../components/NotificationBell';
+import { fileToCompressedDataUrl } from '../utils/image';
+import { advanceOrder, cancelOrder } from '../utils/orders';
 import {
     PiPottedPlant,
     PiHouse,
@@ -126,6 +129,10 @@ const FarmerDashboardPage = () => {
     const [price, setPrice] = useState('');
     const [category, setCategory] = useState('Vegetables');
     const [quantity, setQuantity] = useState('');
+    const [stock, setStock] = useState('');
+    const [photo, setPhoto] = useState('');
+    const [photoLoading, setPhotoLoading] = useState(false);
+    const [updatingStockId, setUpdatingStockId] = useState(null);
 
     const profile = {
         name: authProfile?.displayName || user?.displayName || 'Farmer',
@@ -273,6 +280,7 @@ const FarmerDashboardPage = () => {
         const cleanName = name.trim();
         const cleanPrice = price.trim().replace(/^₦\s*/, '');
         const cleanQuantity = quantity.trim() || 'In stock';
+        const cleanStock = Number(stock);
 
         if (
             !cleanName ||
@@ -281,6 +289,22 @@ const FarmerDashboardPage = () => {
             Number(cleanPrice.replace(/,/g, '')) <= 0
         ) {
             setProductError('Enter a valid product name and price.');
+            return;
+        }
+
+        if (
+            !Number.isInteger(cleanStock) ||
+            cleanStock < 1 ||
+            cleanStock > 100000
+        ) {
+            setProductError(
+                'Enter how many units you have in stock (a whole number of 1 or more).'
+            );
+            return;
+        }
+
+        if (photoLoading) {
+            setProductError('Please wait for your photo to finish loading.');
             return;
         }
 
@@ -296,8 +320,9 @@ const FarmerDashboardPage = () => {
             category,
             price: cleanPrice,
             quantity: cleanQuantity,
+            stock: cleanStock,
             status: 'Available',
-            image: '',
+            image: photo,
             createdAt: serverTimestamp(),
         };
 
@@ -320,6 +345,8 @@ const FarmerDashboardPage = () => {
             setPrice('');
             setCategory('Vegetables');
             setQuantity('');
+            setStock('');
+            setPhoto('');
             setShowAddForm(false);
             setActiveTab('My Products');
         } catch (error) {
@@ -359,7 +386,132 @@ const FarmerDashboardPage = () => {
         }
     };
 
-    // Update the order status in Firestore.
+    // Read the chosen photo, shrink it, and keep it for the product form.
+    const handlePhotoChange = async (event) => {
+        const file = event.target.files?.[0];
+
+        if (!file) {
+            setPhoto('');
+            return;
+        }
+
+        setPhotoLoading(true);
+        setProductError('');
+
+        try {
+            setPhoto(await fileToCompressedDataUrl(file));
+        } catch (error) {
+            setPhoto('');
+            event.target.value = '';
+            setProductError(error.message || 'That photo could not be used.');
+        } finally {
+            setPhotoLoading(false);
+        }
+    };
+
+    // Change how many units of a product are in stock.
+    const handleUpdateStock = async (item) => {
+        const answer = window.prompt(
+            `How many units of "${item.name}" are in stock now?`,
+            String(typeof item.stock === 'number' ? item.stock : 0)
+        );
+
+        if (answer === null) return;
+
+        const newStock = Number(answer);
+
+        if (
+            answer.trim() === '' ||
+            !Number.isInteger(newStock) ||
+            newStock < 0 ||
+            newStock > 100000
+        ) {
+            setProductError('Enter a whole number between 0 and 100,000.');
+            return;
+        }
+
+        const newStatus = newStock > 0 ? 'Available' : 'Sold Out';
+
+        setUpdatingStockId(item.id);
+        setProductError('');
+
+        try {
+            await updateDoc(doc(db, 'products', item.id), {
+                stock: newStock,
+                status: newStatus,
+            });
+
+            setProducts((previous) =>
+                previous.map((product) =>
+                    product.id === item.id
+                        ? { ...product, stock: newStock, status: newStatus }
+                        : product
+                )
+            );
+        } catch (error) {
+            console.error('Error updating stock:', error);
+            setProductError('Could not update the stock. Please try again.');
+        } finally {
+            setUpdatingStockId(null);
+        }
+    };
+
+    // Decline a pending order. Stock goes back on the shelf.
+    const handleDeclineOrder = async (order) => {
+        if (
+            !window.confirm(
+                'Decline this order? The buyer will be notified and any card payment refunded (demo).'
+            )
+        ) {
+            return;
+        }
+
+        setUpdatingOrderId(order.id);
+        setOrderError('');
+
+        try {
+            const result = await cancelOrder(
+                order,
+                user.uid,
+                'farmer',
+                profile.farmName
+            );
+
+            setOrders((previous) =>
+                previous.map((item) =>
+                    item.id === order.id ? { ...item, ...result } : item
+                )
+            );
+
+            setProducts((previous) =>
+                previous.map((product) => {
+                    const returned = getOrderItems(order, user.uid)
+                        .filter((item) => item.productId === product.id)
+                        .reduce(
+                            (total, item) => total + Number(item.quantity || 0),
+                            0
+                        );
+
+                    return returned > 0 && typeof product.stock === 'number'
+                        ? {
+                            ...product,
+                            stock: product.stock + returned,
+                            status: 'Available',
+                        }
+                        : product;
+                })
+            );
+        } catch (error) {
+            console.error('Error declining order:', error);
+            setOrderError(
+                error.message || 'Could not decline this order. Please try again.'
+            );
+        } finally {
+            setUpdatingOrderId(null);
+        }
+    };
+
+    // Move the order to its next status and notify the buyer.
     const handleStatusUpdate = async (order) => {
         const nextStatus = getNextStatus(order.status || 'Pending');
 
@@ -369,14 +521,17 @@ const FarmerDashboardPage = () => {
         setOrderError('');
 
         try {
-            await updateDoc(doc(db, 'orders', order.id), {
-                status: nextStatus,
-            });
+            const updates = await advanceOrder(
+                order,
+                nextStatus,
+                user.uid,
+                profile.farmName
+            );
 
             setOrders((previous) =>
                 previous.map((item) =>
                     item.id === order.id
-                        ? { ...item, status: nextStatus }
+                        ? { ...item, ...updates }
                         : item
                 )
             );
@@ -485,12 +640,30 @@ const FarmerDashboardPage = () => {
                                     {item.quantity} • {item.status}
                                 </p>
 
+                                {typeof item.stock === 'number' && (
+                                    <p
+                                        className={`text-xs font-semibold mt-0.5 ${
+                                            item.stock === 0
+                                                ? 'text-red-600'
+                                                : item.stock <= 5
+                                                    ? 'text-amber-700'
+                                                    : 'text-green-700'
+                                        }`}
+                                    >
+                                        {item.stock === 0
+                                            ? 'Sold out'
+                                            : `${item.stock} in stock`}
+                                    </p>
+                                )}
+
                                 <div className="flex gap-2 mt-3 pt-2 border-t">
                                     <button
-                                        onClick={() => alert('Product editing is not connected yet.')}
-                                        className="flex-1 py-1 text-xs font-semibold bg-gray-50 hover:bg-gray-100 border rounded flex items-center justify-center gap-1"
+                                        onClick={() => handleUpdateStock(item)}
+                                        disabled={updatingStockId === item.id}
+                                        className="flex-1 py-1 text-xs font-semibold bg-gray-50 hover:bg-gray-100 border rounded flex items-center justify-center gap-1 disabled:opacity-50"
                                     >
-                                        <PiPencilSimple /> Edit
+                                        <PiPencilSimple />
+                                        {updatingStockId === item.id ? 'Saving...' : 'Update stock'}
                                     </button>
 
                                     <button
@@ -530,6 +703,7 @@ const FarmerDashboardPage = () => {
                             <th className="pb-2 pr-3">Buyer</th>
                             <th className="pb-2 pr-3">Date</th>
                             <th className="pb-2 pr-3">Amount</th>
+                            <th className="pb-2 pr-3">Payment</th>
                             <th className="pb-2 pr-3">Status</th>
                             <th className="pb-2">Action</th>
                         </tr>
@@ -538,7 +712,7 @@ const FarmerDashboardPage = () => {
                     <tbody className="divide-y divide-gray-100">
                         {!ordersLoading && orders.length === 0 && (
                             <tr>
-                                <td colSpan="7" className="py-8 text-center text-gray-500">
+                                <td colSpan="8" className="py-8 text-center text-gray-500">
                                     No customer orders have been found for your farm yet.
                                 </td>
                             </tr>
@@ -584,6 +758,18 @@ const FarmerDashboardPage = () => {
                                         {formatPrice(getFarmerOrderTotal(order, user?.uid))}
                                     </td>
 
+                                    <td className="py-2.5 pr-3 text-xs">
+                                        <span className="font-semibold text-gray-800 whitespace-nowrap">
+                                            {order.paymentStatus || 'Not recorded'}
+                                        </span>
+
+                                        {order.cardLast4 && (
+                                            <span className="block text-gray-500 whitespace-nowrap">
+                                                {order.cardBrand} •••• {order.cardLast4}
+                                            </span>
+                                        )}
+                                    </td>
+
                                     <td className="py-2.5 pr-3">
                                         <span className={`px-2 py-0.5 rounded text-xs font-semibold ${statusStyle}`}>
                                             {status}
@@ -592,15 +778,28 @@ const FarmerDashboardPage = () => {
 
                                     <td className="py-2.5">
                                         {nextStatus ? (
-                                            <button
-                                                onClick={() => handleStatusUpdate(order)}
-                                                disabled={updatingOrderId === order.id}
-                                                className="px-2 py-1 text-xs font-semibold bg-green-50 text-green-700 hover:bg-green-100 rounded border border-green-200 disabled:opacity-50 whitespace-nowrap"
-                                            >
-                                                {updatingOrderId === order.id
-                                                    ? 'Updating...'
-                                                    : `Mark ${nextStatus}`}
-                                            </button>
+                                            <div className="flex gap-1.5">
+                                                <button
+                                                    onClick={() => handleStatusUpdate(order)}
+                                                    disabled={updatingOrderId === order.id}
+                                                    className="px-2 py-1 text-xs font-semibold bg-green-50 text-green-700 hover:bg-green-100 rounded border border-green-200 disabled:opacity-50 whitespace-nowrap"
+                                                >
+                                                    {updatingOrderId === order.id
+                                                        ? 'Updating...'
+                                                        : `Mark ${nextStatus}`}
+                                                </button>
+
+                                                {status.toLowerCase() === 'pending' &&
+                                                    order.farmerIds?.length === 1 && (
+                                                        <button
+                                                            onClick={() => handleDeclineOrder(order)}
+                                                            disabled={updatingOrderId === order.id}
+                                                            className="px-2 py-1 text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 rounded border border-red-200 disabled:opacity-50"
+                                                        >
+                                                            Decline
+                                                        </button>
+                                                    )}
+                                            </div>
                                         ) : (
                                             <span className="text-xs text-gray-500">
                                                 No action
@@ -655,16 +854,59 @@ const FarmerDashboardPage = () => {
 
                 <input
                     type="text"
-                    placeholder="Quantity (e.g. 20 crates)"
+                    placeholder="Pack size (e.g. 1 crate, 50kg bag)"
                     value={quantity}
                     onChange={(e) => setQuantity(e.target.value)}
                     className="p-2 border rounded-lg text-sm"
                 />
 
+                <input
+                    type="number"
+                    required
+                    min="1"
+                    max="100000"
+                    step="1"
+                    placeholder="Units in stock (e.g. 20)"
+                    value={stock}
+                    onChange={(e) => setStock(e.target.value)}
+                    className="p-2 border rounded-lg text-sm"
+                />
+
+                <div className="sm:col-span-1 md:col-span-3 flex items-center gap-3">
+                    {photo ? (
+                        <img
+                            src={photo}
+                            alt="Product preview"
+                            className="h-14 w-14 rounded-lg object-cover border"
+                        />
+                    ) : (
+                        <div className="h-14 w-14 rounded-lg bg-green-50 border border-dashed border-green-300 flex items-center justify-center text-[10px] text-gray-500 text-center">
+                            No photo
+                        </div>
+                    )}
+
+                    <label className="text-xs text-gray-600">
+                        <span className="block font-semibold mb-1">
+                            Product photo (optional)
+                        </span>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePhotoChange}
+                            className="text-xs"
+                        />
+                        {photoLoading && (
+                            <span className="block mt-1 text-gray-500">
+                                Preparing photo...
+                            </span>
+                        )}
+                    </label>
+                </div>
+
                 <div className="sm:col-span-2 md:col-span-4 flex gap-2">
                     <button
                         type="submit"
-                        disabled={savingProduct}
+                        disabled={savingProduct || photoLoading}
                         className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-60"
                     >
                         {savingProduct ? 'Saving...' : 'Save Product'}
@@ -745,7 +987,9 @@ const FarmerDashboardPage = () => {
 
             {/* Main Content */}
             <main className="flex-1 min-w-0 p-4 md:p-8 md:ml-64 space-y-6">
-                <div className="flex justify-end">
+                <div className="flex justify-end items-center gap-3">
+                    <NotificationBell />
+
                     <button
                         onClick={handleLogout}
                         className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-semibold"
