@@ -24,7 +24,7 @@ import {
 import { db } from '../firebase';
 import { useAuth } from '../auth/AuthContext';
 import Footer from '../components/footer';
-import DashboardTopBar from '../components/DashboardTopBar';
+import DashboardTopBar from '../components/dashboardTopBar';
 
 const sampleProducts = [
     {
