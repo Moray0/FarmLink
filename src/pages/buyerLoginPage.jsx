@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PiPottedPlant } from 'react-icons/pi';
+import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { useAuth } from '../auth/AuthContext';
 import { ROLE_HOME } from '../auth/roles';
 import { friendlyError } from '../auth/authErrors';
@@ -21,6 +22,7 @@ const BuyerLoginPage = () => {
     // State for email and password
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -118,14 +120,24 @@ const BuyerLoginPage = () => {
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Password
                             </label>
-                            <input
-                                type="password"
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Enter your password"
-                                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
-                            />
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="Enter your password"
+                                    className="w-full px-4 py-2.5 pr-12 rounded-xl border border-gray-300 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword((visible) => !visible)}
+                                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                    className="absolute inset-y-0 right-0 flex items-center px-4 text-gray-500 hover:text-green-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-green-500 rounded-r-xl"
+                                >
+                                    {showPassword ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}
+                                </button>
+                            </div>
                         </div>
 
                         {/* Show login errors */}
