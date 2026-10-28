@@ -6,16 +6,19 @@ import {
     PiMapPin,
     PiPlant,
     PiEnvelope,
-    PiArrowLeft,
+    PiX,
 } from 'react-icons/pi';
 import {
+    addDoc,
     collection,
     query,
+    serverTimestamp,
     where,
     getDocs,
 } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import Footer from '../components/footer';
+import { useAuth } from '../auth/AuthContext';
 
 const farmingCategories = [
     'All Farmers',
@@ -36,9 +39,14 @@ const FarmerPage = () => {
         location.state?.fromBuyerDashboard === true;
 
     const { scrollYProgress } = useScroll();
+    const { user } = useAuth();
 
     const [selectedCategory, setSelectedCategory] = useState('All Farmers');
-    const [selectedFarmer, setSelectedFarmer] = useState(null);
+    const [contactFarmer, setContactFarmer] = useState(null);
+    const [contactMessage, setContactMessage] = useState('');
+    const [contactError, setContactError] = useState('');
+    const [contactSent, setContactSent] = useState(false);
+    const [sendingContact, setSendingContact] = useState(false);
     const [registeredFarmers, setRegisteredFarmers] = useState([]);
     const [availableProducts, setAvailableProducts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -161,10 +169,6 @@ const FarmerPage = () => {
         )
     ));
 
-    const scrollToTop = () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
     const renderDashboardTopBar = () => (
         openedFromBuyerDashboard ? (
             <div className="bg-green-700">
@@ -173,132 +177,64 @@ const FarmerPage = () => {
         ) : null
     );
 
-    if (selectedFarmer) {
-        const farmerProducts = Array.isArray(selectedFarmer.products)
-            ? selectedFarmer.products
-            : [];
+    const openContactForm = (farmer) => {
+        setContactFarmer(farmer);
+        setContactMessage('');
+        setContactError('');
+        setContactSent(false);
+    };
 
-        return (
-            <>
-                <motion.div
-                    style={{
-                        scaleY: scrollYProgress,
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        bottom: 0,
-                        width: 5,
-                        originY: 0,
-                        backgroundColor: '#16a34a',
-                        zIndex: 50,
-                    }}
-                />
+    const closeContactForm = () => {
+        if (sendingContact) return;
+        setContactFarmer(null);
+        setContactMessage('');
+        setContactError('');
+        setContactSent(false);
+    };
 
-                {renderDashboardTopBar()}
+    const sendContactMessage = async (event) => {
+        event.preventDefault();
 
-                <div className="min-h-screen bg-gray-50">
-                    <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-8">
-                        <button
-                            onClick={() => {
-                                setSelectedFarmer(null);
-                                scrollToTop();
-                            }}
-                            className="flex items-center gap-2 text-green-700 font-medium mb-6"
-                        >
-                            <PiArrowLeft className="w-5 h-5" />
-                            Back to All Farmers
-                        </button>
+        if (!user) {
+            setContactError('Please log in as a buyer before contacting a farmer.');
+            return;
+        }
 
-                        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm mb-12">
-                            <div className="flex flex-col sm:flex-row">
-                                <img
-                                    src={selectedFarmer.image || defaultFarmerImage}
-                                    alt={selectedFarmer.name}
-                                    className="w-full sm:w-64 h-64 object-cover"
-                                />
+        const message = contactMessage.trim();
 
-                                <div className="p-6 flex-1">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <h1 className="text-2xl font-bold text-gray-900">
-                                            {selectedFarmer.name}
-                                        </h1>
+        if (!message) {
+            setContactError('Please write a short message.');
+            return;
+        }
 
-                                        <span
-                                            className={`px-3 py-1 text-xs font-semibold rounded-full ${selectedFarmer.verified
-                                                ? 'bg-green-100 text-green-800'
-                                                : 'bg-yellow-100 text-yellow-800'
-                                                }`}
-                                        >
-                                            {selectedFarmer.verified
-                                                ? 'Verified'
-                                                : 'Pending'}
-                                        </span>
-                                    </div>
+        const contactText = `${message}\nReply to: ${
+            user.email || 'the buyer through FarmLink'
+        }`;
 
-                                    <p className="text-green-700 font-medium mt-1">
-                                        {selectedFarmer.farmName}
-                                    </p>
+        setSendingContact(true);
+        setContactError('');
 
-                                    <p className="text-sm text-gray-500 flex items-center gap-1 mt-3">
-                                        <PiMapPin className="w-4 h-4" />
-                                        {selectedFarmer.location}
-                                    </p>
+        try {
+            await addDoc(collection(db, 'notifications'), {
+                userId: contactFarmer.id,
+                actorId: user.uid,
+                type: 'farmer_inquiry',
+                title: `New message from ${user.displayName || 'a buyer'}`,
+                message: contactText,
+                orderId: '',
+                read: false,
+                createdAt: serverTimestamp(),
+            });
 
-                                    <span className="inline-block mt-3 px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                                        {selectedFarmer.specialty}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="p-6 border-t border-gray-100">
-                                <h2 className="text-lg font-bold mb-2">About</h2>
-                                <p className="text-sm text-gray-600 leading-relaxed">
-                                    {selectedFarmer.bio}
-                                </p>
-                            </div>
-
-                            <div className="p-6 border-t border-gray-100">
-                                <h2 className="text-lg font-bold mb-4">
-                                    Available Products ({farmerProducts.length})
-                                </h2>
-
-                                {farmerProducts.length === 0 ? (
-                                    <p className="text-sm text-gray-500">
-                                        No available products yet.
-                                    </p>
-                                ) : (
-                                    <div className="flex flex-wrap gap-2">
-                                        {farmerProducts.map((product, index) => (
-                                            <span
-                                                key={product.id || `${product}-${index}`}
-                                                className="px-3 py-2 bg-green-50 text-green-800 text-sm rounded-lg"
-                                            >
-                                                {typeof product === 'string'
-                                                    ? product
-                                                    : `${product.name || 'Unnamed Product'} — ₦${String(product.price ?? '').replace(/^₦/, '')}`}
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="p-6 border-t border-gray-100">
-                                <button
-                                    onClick={() => alert('Buyer inquiries are not connected yet.')}
-                                    className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-xl"
-                                >
-                                    <PiEnvelope className="w-5 h-5" />
-                                    Send Inquiry
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <Footer />
-            </>
-        );
-    }
+            setContactSent(true);
+            setContactMessage('');
+        } catch (error) {
+            console.error('Could not send farmer inquiry:', error);
+            setContactError('The message could not be sent. Please try again.');
+        } finally {
+            setSendingContact(false);
+        }
+    };
 
     return (
         <>
@@ -427,58 +363,54 @@ const FarmerPage = () => {
                                         </span>
                                     </div>
 
-                                    <div className="p-4 space-y-2">
-                                        <h3 className="text-lg font-bold text-gray-900">
-                                            {farmer.name}
-                                        </h3>
+                                    <div className="p-5 flex min-h-70 flex-col">
+                                        <div>
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <h3 className="text-lg font-bold text-gray-900">
+                                                        {farmer.name}
+                                                    </h3>
 
-                                        <p className="text-sm text-green-700 font-medium">
-                                            {farmer.farmName}
-                                        </p>
-
-                                        <p className="text-sm text-gray-500 flex items-center gap-1">
-                                            <PiMapPin className="w-4 h-4" />
-                                            {farmer.location}
-                                        </p>
-
-                                        <span className="inline-block px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                                            {farmer.specialty}
-                                        </span>
-
-                                        <div className="pt-3 border-t border-gray-100">
-                                            <h4 className="text-sm font-semibold text-gray-800 mb-2">
-                                                Available Products ({farmerProducts.length})
-                                            </h4>
-
-                                            {farmerProducts.length === 0 ? (
-                                                <p className="text-xs text-gray-500">
-                                                    No available products yet.
-                                                </p>
-                                            ) : (
-                                                <div className="flex flex-wrap gap-2">
-                                                    {farmerProducts.map((product, index) => (
-                                                        <span
-                                                            key={product.id || `${product}-${index}`}
-                                                            className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-md"
-                                                        >
-                                                            {typeof product === 'string'
-                                                                ? product
-                                                                : product.name || 'Unnamed Product'}
-                                                        </span>
-                                                    ))}
+                                                    <p className="text-sm text-green-700 font-medium mt-1">
+                                                        {farmer.farmName}
+                                                    </p>
                                                 </div>
-                                            )}
+
+                                                <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600">
+                                                    {farmerProducts.length} product{farmerProducts.length === 1 ? '' : 's'}
+                                                </span>
+                                            </div>
+
+                                            <p className="text-sm text-gray-500 flex items-center gap-1 mt-3">
+                                                <PiMapPin className="w-4 h-4" />
+                                                {farmer.location}
+                                            </p>
+
+                                            <span className="inline-block mt-3 px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                                                {farmer.specialty}
+                                            </span>
                                         </div>
 
-                                        <button
-                                            onClick={() => {
-                                                setSelectedFarmer(farmer);
-                                                scrollToTop();
-                                            }}
-                                            className="w-full mt-2 py-2 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-lg"
-                                        >
-                                            View Profile
-                                        </button>
+                                        <div className="mt-auto pt-4">
+                                            <p className="text-xs text-gray-500 mb-3">
+                                                {farmerProducts.length > 0
+                                                    ? `Selling ${farmerProducts
+                                                        .slice(0, 2)
+                                                        .map((product) => product.name || 'fresh produce')
+                                                        .join(' and ')}${farmerProducts.length > 2 ? ' and more' : ''}.`
+                                                    : 'No available products yet.'}
+                                            </p>
+
+                                            <button
+                                                type="button"
+                                                aria-label={`Contact ${farmer.farmName}`}
+                                                onClick={() => openContactForm(farmer)}
+                                                className="w-full inline-flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition"
+                                            >
+                                                <PiEnvelope className="w-4 h-4" />
+                                                Contact Farmer
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             );
@@ -508,6 +440,81 @@ const FarmerPage = () => {
                     </div>
                 </section>
             </div>
+
+            {contactFarmer && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900">
+                                    Contact {contactFarmer.farmName}
+                                </h2>
+                                <p className="mt-1 text-sm text-gray-500">
+                                    Send a short message to this farmer.
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={closeContactForm}
+                                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+                                aria-label="Close contact form"
+                            >
+                                <PiX className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        {!user && (
+                            <p className="mt-5 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+                                Please log in as a buyer before sending a message.
+                            </p>
+                        )}
+
+                        {contactSent ? (
+                            <div className="mt-5 rounded-lg bg-green-50 p-4 text-sm text-green-800">
+                                Your message was sent. The farmer will see it in their notifications.
+                            </div>
+                        ) : (
+                            <form onSubmit={sendContactMessage} className="mt-5 space-y-4">
+                                <div>
+                                    <label
+                                        htmlFor="farmer-message"
+                                        className="block text-sm font-medium text-gray-700"
+                                    >
+                                        Your message
+                                    </label>
+                                    <textarea
+                                        id="farmer-message"
+                                        value={contactMessage}
+                                        onChange={(event) => setContactMessage(event.target.value)}
+                                        maxLength={220}
+                                        rows={4}
+                                        placeholder="Ask about product availability, price, or delivery."
+                                        className="mt-1 w-full resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    />
+                                    <p className="mt-1 text-right text-xs text-gray-400">
+                                        {contactMessage.length}/220
+                                    </p>
+                                </div>
+
+                                {contactError && (
+                                    <p role="alert" className="text-sm text-red-600">
+                                        {contactError}
+                                    </p>
+                                )}
+
+                                <button
+                                    type="submit"
+                                    disabled={sendingContact || !user}
+                                    className="w-full rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {sendingContact ? 'Sending...' : 'Send Message'}
+                                </button>
+                            </form>
+                        )}
+                    </div>
+                </div>
+            )}
 
             <Footer />
         </>

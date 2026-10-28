@@ -302,7 +302,8 @@ service cloud.firestore {
         && request.resource.data.type in [
           "order_placed",
           "order_status",
-          "order_cancelled"
+          "order_cancelled",
+          "farmer_inquiry"
         ]
         && request.resource.data.title is string
         && request.resource.data.title.size() <= 120

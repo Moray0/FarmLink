@@ -23,6 +23,7 @@ const AuthContext = createContext(null);
 const pendingSignUps = new Map();
 const profileCache = new Map();
 const profileLoads = new Map();
+const publicProfileSyncs = new Map();
 
 async function syncFarmerPublicProfile(firebaseUser, profile) {
   if (profile.role !== "farmer") return;
@@ -49,6 +50,22 @@ async function syncFarmerPublicProfile(firebaseUser, profile) {
   }
 }
 
+function syncFarmerPublicProfileInBackground(firebaseUser, profile) {
+  if (profile.role !== "farmer" || publicProfileSyncs.has(firebaseUser.uid)) {
+    return;
+  }
+
+  const syncPromise = syncFarmerPublicProfile(firebaseUser, profile)
+    .catch((error) => {
+      console.error("Failed to sync farmer public profile:", error);
+    })
+    .finally(() => {
+      publicProfileSyncs.delete(firebaseUser.uid);
+    });
+
+  publicProfileSyncs.set(firebaseUser.uid, syncPromise);
+}
+
 async function loadProfile(firebaseUser) {
   const uid = firebaseUser.uid;
   const emailKey = (firebaseUser.email || "").toLowerCase();
@@ -56,7 +73,6 @@ async function loadProfile(firebaseUser) {
 
   if (profileCache.has(uid)) {
     const cachedProfile = profileCache.get(uid);
-    await syncFarmerPublicProfile(firebaseUser, cachedProfile);
     return cachedProfile;
   }
 
@@ -124,8 +140,6 @@ async function loadProfile(firebaseUser) {
       profile = { ...profile, role: "admin" };
     }
 
-    await syncFarmerPublicProfile(firebaseUser, profile);
-
     profileCache.set(uid, profile);
     return profile;
   })();
@@ -165,6 +179,7 @@ export function AuthProvider({ children }) {
           setAuthError("");
           setUser(firebaseUser);
           setProfile(userProfile);
+          syncFarmerPublicProfileInBackground(firebaseUser, userProfile);
         } catch (error) {
           setAuthError(friendlyError(error));
           console.error("Failed to load user profile:", error);
@@ -203,8 +218,10 @@ export function AuthProvider({ children }) {
         password
       );
 
-      await updateProfile(credential.user, {
+      updateProfile(credential.user, {
         displayName: name,
+      }).catch((error) => {
+        console.error("Failed to update authentication profile:", error);
       });
 
       // Remove any stale cached profile for this new account.
@@ -214,6 +231,7 @@ export function AuthProvider({ children }) {
       setJustSignedUp(true);
       setUser(credential.user);
       setProfile(userProfile);
+      syncFarmerPublicProfileInBackground(credential.user, userProfile);
 
       return userProfile;
     } finally {

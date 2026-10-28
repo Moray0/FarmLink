@@ -23,7 +23,7 @@ const LandingPage = () => {
       id: 1,
       name: 'Fresh Roma Tomatoes',
       category: 'Vegetables',
-      price: '$22',
+      price: '₦22,000',
       unit: 'per crate',
       farmer: 'Adeola Green Farms',
       location: 'Ogun State',
@@ -34,7 +34,7 @@ const LandingPage = () => {
       id: 2,
       name: 'Golden Sweet Maize',
       category: 'Grains',
-      price: '$18',
+      price: '₦18,000',
       unit: 'per 50kg bag',
       farmer: 'Kano Grain Producers',
       location: 'Kano State',
@@ -45,7 +45,7 @@ const LandingPage = () => {
       id: 3,
       name: 'Crisp Bell Peppers',
       category: 'Vegetables',
-      price: '$15',
+      price: '₦15,000',
       unit: 'per basket',
       farmer: 'Sunshine Agro Farms',
       location: 'Oyo State',
@@ -56,7 +56,7 @@ const LandingPage = () => {
       id: 4,
       name: 'Organic Plantain Bunches',
       category: 'Fruits',
-      price: '$14',
+      price: '₦14,000',
       unit: 'per large bunch',
       farmer: 'Delta Groves Agro',
       location: 'Delta State',
@@ -67,7 +67,7 @@ const LandingPage = () => {
       id: 5,
       name: 'Red Spanish Onions',
       category: 'Vegetables',
-      price: '$16',
+      price: '₦16,000',
       unit: 'per 25kg bag',
       farmer: 'Kebbi Green Fields',
       location: 'Kebbi State',
@@ -78,7 +78,7 @@ const LandingPage = () => {
       id: 6,
       name: 'Farm Fresh Sweet Potatoes',
       category: 'Tubers',
-      price: '$20',
+      price: '₦20,000',
       unit: 'per sack',
       farmer: 'Plateau Highland Harvest',
       location: 'Plateau State',
@@ -143,19 +143,54 @@ const LandingPage = () => {
           {/* Background Image of fresh crops and vegetables */}
 
 
-          <img
+          <motion.img
             src="herobg.png"
             alt="Fresh agricultural farm crops and vegetables"
-            className="absolute inset-0 w-full h-full object-cover object-[75%_center] sm:object-center"
+            animate={{ scale: [1, 1.035, 1] }}
+            transition={{
+              duration: 18,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }}
+            className="absolute inset-0 h-full w-full object-cover object-[75%_center] sm:object-center"
           />
 
 
           {/* Soft Dark/Green Overlay for clear text readability */}
           <div className="absolute inset-0 bg-linear-to-r from-green-950 via-green-950/85 to-black/20"></div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1.2, ease: 'easeOut' }}
+            className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-green-400/15 blur-3xl"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.7 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.25, duration: 1.2, ease: 'easeOut' }}
+            className="absolute -bottom-32 left-1/3 h-96 w-96 rounded-full bg-lime-300/10 blur-3xl"
+          />
+          <motion.div
+            animate={{ y: [0, -12, 0], rotate: [0, 5, 0] }}
+            transition={{
+              duration: 4,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }}
+            className="absolute right-[12%] top-1/4 hidden text-5xl opacity-70 drop-shadow-lg sm:block"
+            aria-hidden="true"
+          >
+            🌿
+          </motion.div>
 
           {/* Hero Content Container - Aligned with the rest of the page */}
           <div className="relative w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-16 sm:py-24 text-white">
-            <div className="max-w-3xl">
+            <motion.div
+              initial={{ opacity: 0, y: 28 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: 'easeOut' }}
+              className="max-w-3xl"
+            >
 
               {/* Main Heading */}
               <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight mb-6">
@@ -171,19 +206,23 @@ const LandingPage = () => {
               
             {/* Call-To-Action (CTA) Buttons */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-              <Link
-                to="/marketplace"
-                className="px-8 py-3.5 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 text-center"
-              >
-                Browse Fresh Produce
-              </Link>
+              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+                <Link
+                  to="/marketplace"
+                  className="block px-8 py-3.5 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 text-center"
+                >
+                  Browse Fresh Produce
+                </Link>
+              </motion.div>
 
-              <Link
-                to="/farmer-signup"
-                className="px-8 py-3.5 bg-white/10 hover:bg-white/20 text-white border border-white/40 font-semibold rounded-xl backdrop-blur-xs transition-all text-center"
-              >
-                Join as a Farmer
-              </Link>
+              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+                <Link
+                  to="/farmer-signup"
+                  className="block px-8 py-3.5 bg-white/10 hover:bg-white/20 text-white border border-white/40 font-semibold rounded-xl backdrop-blur-xs transition-all text-center"
+                >
+                  Join as a Farmer
+                </Link>
+              </motion.div>
             </div>
 
 
@@ -202,8 +241,7 @@ const LandingPage = () => {
                   <p className="text-xs sm:text-sm text-green-200 mt-1">Middlemen Fees</p>
                 </div>
               </div>
-
-            </div>
+            </motion.div>
           </div>
         </section>
 
@@ -227,15 +265,21 @@ const LandingPage = () => {
           {/* Category Cards Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {categories.map((cat) => (
-              <a
+              <motion.a
                 key={cat.id}
                 href="#listings"
-                className="group min-w-0 bg-white border border-green-100 hover:border-green-300 rounded-2xl p-3 sm:p-5 text-center shadow-xs hover:shadow-md transition-all duration-200 flex flex-col items-center justify-between hover:-translate-y-1"
+                whileHover={{ y: -6, scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                className="group min-w-0 rounded-2xl border border-green-100 bg-white p-3 text-center shadow-sm transition-colors duration-200 hover:border-green-300 hover:shadow-lg sm:p-5"
               >
                 {/* Category Emoji Badge */}
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-green-50 group-hover:bg-green-100 flex items-center justify-center text-3xl mb-3 transition-colors">
+                <motion.div
+                  whileHover={{ y: -4, rotate: 5 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 18 }}
+                  className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-green-50 text-3xl transition-colors group-hover:bg-green-100 sm:h-14 sm:w-14"
+                >
                   {cat.emoji}
-                </div>
+                </motion.div>
 
                 {/* Category Title */}
                 <h3 className="font-semibold text-gray-800 group-hover:text-green-700 text-sm sm:text-base mb-1 transition-colors">
@@ -246,7 +290,7 @@ const LandingPage = () => {
                 <span className="text-xs text-green-600 font-medium">
                   {cat.count}
                 </span>
-              </a>
+              </motion.a>
             ))}
           </div>
         </section>
@@ -267,18 +311,27 @@ const LandingPage = () => {
           </div>
 
           {/* Product Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            {freshListings.map((item) => (
-              <div
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {freshListings.map((item, index) => (
+              <motion.div
                 key={item.id}
-                className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm max-w-sm mx-auto w-full"
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: 0.45, delay: index * 0.06 }}
+                whileHover={{ y: -6 }}
+                className="mx-auto w-full max-w-md overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-xl"
               >
                 {/* Product Image */}
-                <img
+                <div className="overflow-hidden">
+                  <motion.img
+                    whileHover={{ scale: 1.08 }}
+                    transition={{ duration: 0.4 }}
                   src={item.image}
                   alt={item.name}
                   className="w-full h-48 object-cover"
-                />
+                  />
+                </div>
 
                 {/* Product Details */}
                 <div className="p-4 space-y-2">
@@ -304,7 +357,7 @@ const LandingPage = () => {
                     </Link>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
 
@@ -340,10 +393,15 @@ const LandingPage = () => {
             {/* Testimonial Cards Grid (3 cards) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
               {testimonials.map((test) => (
-                <div
+                <motion.div
                   key={test.id}
-                  className="bg-white rounded-2xl p-6 sm:p-7 shadow-xs border border-green-100 flex flex-col justify-between"
-                >
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.2 }}
+                    transition={{ duration: 0.45, delay: test.id * 0.08 }}
+                    whileHover={{ y: -5 }}
+                    className="flex flex-col justify-between rounded-2xl border border-green-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-lg sm:p-7"
+                  >
                   <div>
                     {/* Star Rating */}
                     <div className="flex text-amber-400 text-sm mb-4">
@@ -368,7 +426,7 @@ const LandingPage = () => {
                       <p className="text-xs text-green-700 font-medium">{test.role}</p>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
 

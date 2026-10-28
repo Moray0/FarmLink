@@ -729,7 +729,7 @@ const MarketplacePage = () => {
 
             <div className="min-h-screen bg-gray-50">
                 {/* Marketplace heading and cart button */}
-                <section className="bg-green-700 text-white py-10 px-4 sm:px-6">
+                <section className="bg-green-700 text-white py-10 pb-14 px-4 sm:px-6">
                     {openedFromBuyerDashboard && <DashboardTopBar />}
 
                     <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">

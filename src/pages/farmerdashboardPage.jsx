@@ -10,6 +10,7 @@ import {
     addDoc,
     deleteDoc,
     doc,
+    onSnapshot,
     serverTimestamp,
     updateDoc,
 } from 'firebase/firestore';
@@ -110,6 +111,9 @@ const FarmerDashboardPage = () => {
 
     const [products, setProducts] = useState([]);
     const [orders, setOrders] = useState([]);
+    const [messages, setMessages] = useState([]);
+    const [messagesLoading, setMessagesLoading] = useState(true);
+    const [messagesError, setMessagesError] = useState('');
 
     const [productsLoading, setProductsLoading] = useState(true);
     const [ordersLoading, setOrdersLoading] = useState(true);
@@ -138,6 +142,60 @@ const FarmerDashboardPage = () => {
         name: authProfile?.displayName || user?.displayName || 'Farmer',
         farmName: authProfile?.farmName?.trim() || 'Your Farm',
         location: authProfile?.location?.trim() || 'Location not added',
+    };
+
+    useEffect(() => {
+        if (authLoading || !user?.uid || role !== 'farmer') {
+            setMessages([]);
+            setMessagesLoading(false);
+            return undefined;
+        }
+
+        setMessagesLoading(true);
+        setMessagesError('');
+
+        const stopListening = onSnapshot(
+            query(
+                collection(db, 'notifications'),
+                where('userId', '==', user.uid)
+            ),
+            (snapshot) => {
+                const inquiries = snapshot.docs
+                    .map((item) => ({ id: item.id, ...item.data() }))
+                    .filter((item) => item.type === 'farmer_inquiry')
+                    .sort((a, b) => {
+                        const dateA = a.createdAt?.toMillis
+                            ? a.createdAt.toMillis()
+                            : 0;
+                        const dateB = b.createdAt?.toMillis
+                            ? b.createdAt.toMillis()
+                            : 0;
+
+                        return dateB - dateA;
+                    });
+
+                setMessages(inquiries);
+                setMessagesLoading(false);
+            },
+            (error) => {
+                console.error('Could not load farmer messages:', error);
+                setMessagesError('Messages could not be loaded. Please try again.');
+                setMessagesLoading(false);
+            }
+        );
+
+        return stopListening;
+    }, [authLoading, role, user?.uid]);
+
+    const markMessageAsRead = async (messageId) => {
+        try {
+            await updateDoc(doc(db, 'notifications', messageId), {
+                read: true,
+            });
+        } catch (error) {
+            console.error('Could not mark message as read:', error);
+            setMessagesError('The message could not be marked as read.');
+        }
     };
 
     const navItems = [
@@ -1220,20 +1278,82 @@ const FarmerDashboardPage = () => {
                             </p>
                         </div>
 
-                        <div className="bg-white p-10 rounded-xl border border-gray-200 text-center">
-                            <PiChatDots className="w-12 h-12 text-green-600 mx-auto mb-3" />
+                        {messagesError && (
+                            <div
+                                role="alert"
+                                className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+                            >
+                                {messagesError}
+                            </div>
+                        )}
 
-                            <h2 className="text-lg font-bold text-gray-900">
-                                Your Messages
-                            </h2>
+                        <div className="space-y-4">
+                            {messagesLoading ? (
+                                <div className="rounded-xl border border-gray-200 bg-white p-10 text-center">
+                                    <p className="text-sm text-gray-500">
+                                        Loading messages...
+                                    </p>
+                                </div>
+                            ) : messages.length === 0 ? (
+                                <div className="rounded-xl border border-gray-200 bg-white p-10 text-center">
+                                    <PiChatDots className="mx-auto mb-3 h-12 w-12 text-green-600" />
 
-                            <p className="text-sm text-gray-500 mt-2">
-                                No messages are available yet.
-                            </p>
+                                    <h2 className="text-lg font-bold text-gray-900">
+                                        No buyer messages yet
+                                    </h2>
 
-                            <p className="text-xs text-gray-400 mt-1">
-                                A messaging collection and buyer messaging feature need to be connected before conversations can appear here.
-                            </p>
+                                    <p className="mt-2 text-sm text-gray-500">
+                                        Messages sent from your farmer card will appear here.
+                                    </p>
+                                </div>
+                            ) : (
+                                messages.map((message) => (
+                                    <div
+                                        key={message.id}
+                                        className={`rounded-xl border p-5 ${
+                                            message.read === true
+                                                ? 'border-gray-200 bg-white'
+                                                : 'border-green-200 bg-green-50'
+                                        }`}
+                                    >
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                            <div>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <h2 className="font-bold text-gray-900">
+                                                        {message.title || 'Message from a buyer'}
+                                                    </h2>
+
+                                                    {message.read !== true && (
+                                                        <span className="rounded-full bg-green-600 px-2 py-1 text-[11px] font-semibold text-white">
+                                                            New
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <p className="mt-1 whitespace-pre-line text-sm text-gray-700">
+                                                    {message.message}
+                                                </p>
+                                            </div>
+
+                                            <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+                                                <span className="text-xs text-gray-500">
+                                                    {formatDate(message.createdAt)}
+                                                </span>
+
+                                                {message.read !== true && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => markMessageAsRead(message.id)}
+                                                        className="text-xs font-semibold text-green-700 hover:underline"
+                                                    >
+                                                        Mark as read
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </>
                 )}
