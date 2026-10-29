@@ -1,28 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { PiPottedPlant } from 'react-icons/pi';
-import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { useAuth } from '../auth/AuthContext';
 import { friendlyError } from '../auth/authErrors';
 import { ROLE_HOME } from '../auth/roles';
+import {
+    AuthField,
+    AuthPageLayout,
+    AuthSwitcher,
+    PasswordInput,
+} from '../components/authPageParts';
 
 const FarmerSignupPage = () => {
     const navigate = useNavigate();
-    const {
-        signUp,
-        user,
-        role,
-        loading: authLoading,
-    } = useAuth();
-
-    useEffect(() => {
-        if (user && role && !authLoading) {
-            navigate(ROLE_HOME[role] || '/', {
-                replace: true,
-            });
-        }
-    }, [user, role, authLoading, navigate]);
-
+    const { signUp, user, role, loading: authLoading } = useAuth();
     const [name, setName] = useState('');
     const [farmName, setFarmName] = useState('');
     const [location, setLocation] = useState('');
@@ -32,188 +22,59 @@ const FarmerSignupPage = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+    useEffect(() => {
+        if (user && role && !authLoading) navigate(ROLE_HOME[role] || '/', { replace: true });
+    }, [user, role, authLoading, navigate]);
 
-    try {
-        await signUp({
-            name,
-            email,
-            password,
-            role: 'farmer',
-            farmName,
-            location,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
-        });
-    } catch (error) {
-        setError(friendlyError(error));
-        setLoading(false);
-    }
-};
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+        setError('');
+        setLoading(true);
+        try {
+            await signUp({ name, email, password, role: 'farmer', farmName, location });
+        } catch (signUpError) {
+            setError(friendlyError(signUpError));
+            setLoading(false);
+        }
+    };
+
     return (
-        <div className="min-h-[calc(100vh-70px)] flex flex-col lg:flex-row">
-            <div
-                className="w-full lg:w-1/2 relative bg-cover bg-center min-h-75 flex flex-col justify-between p-8 sm:p-12 text-white"
-                style={{
-                    backgroundImage: `url('https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=1200&q=80')`,
-                }}
-            >
-                <div className="absolute inset-0 bg-green-950/75"></div>
-
-                <div className="relative z-10">
-                    <Link to="/" className="inline-flex items-center text-4xl font-bold text-white">
-                        <PiPottedPlant className="w-14 h-14 text-green-300" />
-                        Farm<span className="text-green-300">Link</span>
-                    </Link>
-                </div>
-
-                <div className="relative z-10 my-8">
-                    <h2 className="text-3xl sm:text-4xl font-bold mb-3">
-                        Grow Your Farm Business
-                    </h2>
-                    <p className="text-green-100 text-sm sm:text-base leading-relaxed max-w-md">
-                        Join FarmLink to reach thousands of ready buyers across Nigeria. Sell your harvest at fair prices with zero middlemen.
-                    </p>
-                </div>
-
-                <div className="relative z-10 text-xs sm:text-sm text-green-200">
-                    <PiPottedPlant className="w-10 h-10 inline-block" /> Direct from Nigerian farms to your table
-                </div>
+        <AuthPageLayout
+            image="https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=1200&q=80"
+            title="Grow Your Farm Business"
+            description="Join FarmLink to reach thousands of ready buyers across Nigeria. Sell your harvest at fair prices with zero middlemen."
+            footer="Direct from Nigerian farms to your table"
+        >
+            <AuthSwitcher login={false} farmer={true} />
+            <div className="mb-6">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Join FarmLink Today</h1>
+                <p className="text-sm text-gray-500 mt-1">Register your farm and start selling directly to buyers</p>
             </div>
-
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-white">
-                <div className="w-full max-w-md">
-                    <div className="flex bg-green-50 p-1 rounded-xl border border-green-200 mb-6">
-                        <Link
-                            to="/signup"
-                            className="flex-1 py-2 text-center text-sm font-medium rounded-lg text-green-700 hover:text-green-900"
-                        >
-                            Buyer
-                        </Link>
-                        <Link
-                            to="/farmer-signup"
-                            className="flex-1 py-2 text-center text-sm font-semibold rounded-lg bg-white text-green-800 shadow-sm"
-                        >
-                            Farmer
-                        </Link>
-                    </div>
-
-                    <div className="mb-6">
-                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                            Join FarmLink Today
-                        </h1>
-                        <p className="text-sm text-gray-500 mt-1">
-                            Register your farm and start selling directly to buyers
-                        </p>
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Full Name
-                            </label>
-                            <input
-                                type="text"
-                                required
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                placeholder="Enter your full name"
-                                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Farm Name
-                            </label>
-                            <input
-                                type="text"
-                                required
-                                value={farmName}
-                                onChange={(e) => setFarmName(e.target.value)}
-                                placeholder="e.g. Adeola Green Farm"
-                                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Farm Location
-                            </label>
-                            <input
-                                type="text"
-                                required
-                                value={location}
-                                onChange={(e) => setLocation(e.target.value)}
-                                placeholder="e.g. Ilorin, Kwara State"
-                                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Email Address
-                            </label>
-                            <input
-                                type="email"
-                                required
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="Enter your email"
-                                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Password
-                            </label>
-                            <div className="relative">
-                                <input
-                                    type={showPassword ? 'text' : 'password'}
-                                    required
-                                    minLength={6}
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Create a password"
-                                    className="w-full px-4 py-2.5 pr-12 rounded-xl border border-gray-300 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword((visible) => !visible)}
-                                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                                    className="absolute inset-y-0 right-0 flex items-center px-4 text-gray-500 hover:text-green-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-green-500 rounded-r-xl"
-                                >
-                                    {showPassword ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}
-                                </button>
-                            </div>
-                        </div>
-
-                        {error && (
-                            <p role="alert" className="text-sm text-red-600">
-                                {error}
-                            </p>
-                        )}
-
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white font-semibold rounded-xl cursor-pointer transition mt-2"
-                        >
-                            {loading ? 'Creating Account...' : 'Sign Up'}
-                        </button>
-                    </form>
-
-                    <p className="text-center text-sm text-gray-600 mt-6">
-                        Already have an account?{' '}
-                        <Link to="/farmer-login" className="text-green-700 font-semibold hover:underline">
-                            Log in
-                        </Link>
-                    </p>
-                </div>
-            </div>
-        </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <AuthField label="Full Name">
+                    <input type="text" required value={name} onChange={(event) => setName(event.target.value)} placeholder="Enter your full name" className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </AuthField>
+                <AuthField label="Farm Name">
+                    <input type="text" required value={farmName} onChange={(event) => setFarmName(event.target.value)} placeholder="e.g. Adeola Green Farm" className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </AuthField>
+                <AuthField label="Farm Location">
+                    <input type="text" required value={location} onChange={(event) => setLocation(event.target.value)} placeholder="e.g. Ilorin, Kwara State" className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </AuthField>
+                <AuthField label="Email Address">
+                    <input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Enter your email" className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </AuthField>
+                <AuthField label="Password">
+                    <PasswordInput value={password} onChange={(event) => setPassword(event.target.value)} showPassword={showPassword} onToggle={() => setShowPassword((visible) => !visible)} placeholder="Create a password" minLength={6} />
+                </AuthField>
+                {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+                <button type="submit" disabled={loading} className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white font-semibold rounded-xl cursor-pointer transition mt-2">
+                    {loading ? 'Creating Account...' : 'Sign Up'}
+                </button>
+            </form>
+            <p className="text-center text-sm text-gray-600 mt-6">
+                Already have an account? <Link to="/farmer-login" className="text-green-700 font-semibold hover:underline">Log in</Link>
+            </p>
+        </AuthPageLayout>
     );
 };
 
